@@ -67,7 +67,7 @@ onAuthStateChanged(auth, user => {
       snap.forEach(d => window.trabalhos.push(d.data()));
       window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
       if (window._appReady) {
-        renderDashboard(); renderTrabalhos(); updateBadges();
+        window.renderDashboard(); window.renderTrabalhos(); window.updateBadges();
       }
     });
 
@@ -75,13 +75,13 @@ onAuthStateChanged(auth, user => {
       window.clientes = [];
       snap.forEach(d => window.clientes.push(d.data()));
       if (window._appReady) {
-        renderDashboard(); renderClientes(); updateBadges();
+        window.renderDashboard(); window.renderClientes(); window.updateBadges();
       }
     });
 
     window._appReady = true;
-    renderDashboard();
-    updateBadges();
+    window.renderDashboard();
+    window.updateBadges();
 
   } else {
     // Não autenticado — mostra tela de login
@@ -1035,7 +1035,7 @@ function calcValorDigital() {
   }
 }
 
-function saveTrabalho() {
+async function saveTrabalho() {
   const nome     = document.getElementById('f-nome').value.trim();
   const paciente = document.getElementById('f-paciente').value.trim();
   const valor    = parseFloat(document.getElementById('f-valor').value) || 0;
@@ -1093,7 +1093,7 @@ function closeClienteModal() {
   document.getElementById('modal-cliente').classList.remove('open');
 }
 
-function saveCliente() {
+async function saveCliente() {
   const nome    = document.getElementById('ce-nome').value.trim();
   const contato = document.getElementById('ce-contato').value.trim();
   const social  = document.getElementById('ce-social').value.trim();
