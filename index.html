@@ -4,24 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0e0e10">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LAB.STUDIO">
 <title>LAB — Sistema de Gestão</title>
-<link rel="manifest" href="data:application/json,{
-  %22name%22:%22LAB.STUDIO%22,
-  %22short_name%22:%22LAB%22,
-  %22description%22:%22Sistema de Gest%C3%A3o de Trabalhos%22,
-  %22start_url%22:%22.%22,
-  %22display%22:%22standalone%22,
-  %22background_color%22:%22%230e0e10%22,
-  %22theme_color%22:%22%230e0e10%22,
-  %22icons%22:[{%22src%22:%22https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f3a8.png%22,%22sizes%22:%2272x72%22,%22type%22:%22image/png%22},{%22src%22:%22https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f3a8.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]
-}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
@@ -41,85 +28,48 @@ const db       = getFirestore(app);
 const auth     = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-let unsubTrabalhos = null;
-let unsubClientes  = null;
-let unsubServicos  = null;
+function userCol(colName) { return collection(db, 'usuarios', window._uid, colName); }
+function userDoc(colName, id) { return doc(db, 'usuarios', window._uid, colName, id); }
 
-// ── Helpers para coleções do usuário logado ──
-function userCol(colName) {
-  return collection(db, 'usuarios', window._uid, colName);
-}
-function userDoc(colName, id) {
-  return doc(db, 'usuarios', window._uid, colName, id);
-}
-
-// ── Expõe ao escopo global ──
-window._db        = db;
-window._auth      = auth;
-window._signOut   = () => signOut(auth);
-window._setDoc    = setDoc;
-window._deleteDoc = deleteDoc;
-window._userDoc   = userDoc;
-
-// ── Login Google — qualquer conta ──
 window.fazerLogin = async () => {
-  try {
-    await signInWithPopup(auth, provider);
-  } catch(e) {
-    document.getElementById('login-error').textContent = 'Erro ao fazer login. Tente novamente.';
-  }
+  try { await signInWithPopup(auth, provider); } catch(e) { document.getElementById('login-error').textContent = 'Erro ao fazer login.'; }
 };
 
-// ── Observa autenticação ──
 onAuthStateChanged(auth, user => {
-  if (unsubTrabalhos) { unsubTrabalhos(); unsubTrabalhos = null; }
-  if (unsubClientes)  { unsubClientes();  unsubClientes  = null; }
-  if (unsubServicos)  { unsubServicos();  unsubServicos  = null; }
-  window._appReady = false;
-
   if (user) {
     window._uid = user.uid;
-
     document.getElementById('tela-login').style.display = 'none';
-    document.getElementById('app-root').style.display   = 'block';
-    document.getElementById('sync-status').textContent  = '🟢 ' + (user.displayName || user.email);
-    document.getElementById('sync-status').style.color  = 'var(--green)';
-    document.getElementById('btn-logout').style.display = 'flex';
+    document.getElementById('app-root').style.display = 'block';
+    document.getElementById('sync-status').textContent = '🟢 ' + (user.displayName || user.email);
 
-    unsubTrabalhos = onSnapshot(userCol('trabalhos'), snap => {
-      window.trabalhos = [];
-      snap.forEach(d => window.trabalhos.push(d.data()));
+    // Listeners em tempo real
+    onSnapshot(userCol('trabalhos'), snap => {
+      window.trabalhos = []; snap.forEach(d => window.trabalhos.push(d.data()));
       window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
-      if (window._appReady) { window.renderDashboard(); window.renderTrabalhos(); window.updateBadges(); }
+      refreshUI();
     });
-
-    unsubClientes = onSnapshot(userCol('clientes'), snap => {
-      window.clientes = [];
-      snap.forEach(d => window.clientes.push(d.data()));
-      if (window._appReady) { window.renderDashboard(); window.renderClientes(); window.updateBadges(); }
+    onSnapshot(userCol('clientes'), snap => {
+      window.clientes = []; snap.forEach(d => window.clientes.push(d.data()));
+      refreshUI();
     });
-
-    unsubServicos = onSnapshot(userCol('servicos'), snap => {
-      window.servicos = [];
-      snap.forEach(d => window.servicos.push(d.data()));
-      if (window._appReady) { window.renderServicos(); window.populateServicoSelect(); }
+    onSnapshot(userCol('servicos'), snap => {
+      window.servicos = []; snap.forEach(d => window.servicos.push(d.data()));
+      refreshUI();
     });
-
-    window._appReady = true;
-    window.renderDashboard();
-    window.updateBadges();
-
   } else {
-    window._uid = null;
-    window.trabalhos = [];
-    window.clientes  = [];
-    window.servicos  = [];
     document.getElementById('tela-login').style.display = 'flex';
-    document.getElementById('app-root').style.display   = 'none';
-    document.getElementById('btn-logout').style.display = 'none';
+    document.getElementById('app-root').style.display = 'none';
   }
 });
+
+function refreshUI() {
+    window.renderDashboard?.(); window.renderTrabalhos?.(); 
+    window.renderClientes?.(); window.renderServicos?.(); window.updateBadges?.();
+}
+
+window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDoc; window._signOut = () => signOut(auth);
 </script>
+
 <style>
   :root {
     --bg: #0e0e10;
@@ -139,644 +89,366 @@ onAuthStateChanged(auth, user => {
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  
+  /* GRID NOISE TEXTURE ORIGINAL */
   body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
 
   header {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(14,14,16,0.85);
-    backdrop-filter: blur(16px);
+    background: rgba(14,14,16,0.85); backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 60px;
+    padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 60px;
   }
-
-  .logo {
-    font-size: 18px; font-weight: 800; letter-spacing: 0.12em;
-    color: var(--text);
-    display: flex; align-items: center; gap: 10px;
-  }
+  .logo { font-size: 18px; font-weight: 800; letter-spacing: 0.12em; display: flex; align-items: center; gap: 10px; }
   .logo span { color: var(--accent-analog); }
-  .logo-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--accent-analog);
-    box-shadow: 0 0 10px var(--accent-analog);
-    animation: pulse 2s infinite;
-  }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-analog); box-shadow: 0 0 10px var(--accent-analog); animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
 
   .header-right { display: flex; align-items: center; gap: 16px; }
 
   .btn-backup {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    padding: 7px 14px;
-    border-radius: var(--radius);
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    transition: all .2s;
-    display: flex; align-items: center; gap: 5px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 7px 14px; border-radius: var(--radius); font-weight: 600; font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; transition: all .2s;
   }
-  .btn-backup:hover { border-color: var(--text-muted); color: var(--text); background: var(--surface); }
-  .btn-backup.importar { color: var(--accent-digital); border-color: rgba(59,158,255,0.3); }
-  .btn-backup.importar:hover { background: var(--accent-digital-dim); border-color: var(--accent-digital); }
-
   .btn-add {
-    background: var(--accent-analog);
-    color: #000;
-    border: none;
-    padding: 8px 18px;
-    border-radius: var(--radius);
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    letter-spacing: 0.05em;
-    transition: all .2s;
+    background: var(--accent-analog); color: #000; border: none; padding: 8px 18px;
+    border-radius: var(--radius); font-weight: 700; font-size: 13px; cursor: pointer;
     display: flex; align-items: center; gap: 6px;
   }
-  .btn-add:hover { opacity: .85; transform: translateY(-1px); }
 
-  nav {
-    display: flex; gap: 4px;
-    padding: 16px 32px 0;
-    border-bottom: 1px solid var(--border);
-    position: relative; z-index: 1;
-    overflow-x: auto;
-  }
-  .tab {
-    padding: 10px 20px;
-    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
-    color: var(--text-muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all .2s;
-    display: flex; align-items: center; gap: 7px;
-    white-space: nowrap;
-  }
-  .tab:hover { color: var(--text-dim); }
+  nav { display: flex; gap: 4px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); position: relative; z-index: 1; overflow-x: auto; }
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
   .tab.active { color: var(--text); border-color: var(--accent-analog); }
-  .tab-badge {
-    background: var(--surface2);
-    padding: 2px 7px; border-radius: 20px;
-    font-size: 11px; color: var(--text-muted);
-  }
-  .tab.active .tab-badge { background: var(--accent-analog-dim); color: var(--accent-analog); }
+  .tab-badge { background: var(--surface2); padding: 2px 7px; border-radius: 20px; font-size: 11px; margin-left: 5px; }
 
-  main {
-    padding: 28px 32px;
-    position: relative; z-index: 1;
-    max-width: 1400px;
-  }
-
+  main { padding: 28px 32px; position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; }
   .page { display: none; }
   .page.active { display: block; animation: fadeIn .2s ease; }
-  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
 
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
-  }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); border-top: 2px solid var(--accent-analog); position: relative; }
+  .stat-card.digital { border-top-color: var(--accent-digital); }
+  .stat-value { font-size: 28px; font-weight: 800; font-family: 'DM Mono', monospace; margin-top: 8px; }
+  .stat-value.money::before { content: 'R$ '; font-size: 14px; color: var(--text-muted); }
 
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    position: relative; overflow: hidden;
-    transition: border-color .2s;
-  }
-  .stat-card:hover { border-color: var(--text-muted); }
-  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
-  .stat-card.analog::before { background: var(--accent-analog); }
-  .stat-card.digital::before { background: var(--accent-digital); }
-  .stat-card.total::before { background: linear-gradient(90deg, var(--accent-analog), var(--accent-digital)); }
-  .stat-card.clients::before { background: var(--green); }
-
-  .stat-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
-    color: var(--text-muted); text-transform: uppercase;
-    margin-bottom: 8px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .stat-dot { width: 6px; height: 6px; border-radius: 50%; }
-  .stat-dot.analog { background: var(--accent-analog); }
-  .stat-dot.digital { background: var(--accent-digital); }
-  .stat-dot.total { background: var(--green); }
-  .stat-dot.clients { background: var(--green); }
-
-  .stat-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-  .stat-value.money::before { content: 'R$ '; font-size: 14px; font-weight: 500; color: var(--text-muted); }
-  .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .section-title { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; }
-
-  .filters { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-  .filter-btn {
-    padding: 6px 14px; border-radius: 6px;
-    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: all .15s; letter-spacing: 0.04em;
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--text-muted);
-  }
-  .filter-btn:hover { border-color: var(--text-muted); color: var(--text); }
-  .filter-btn.active { background: var(--surface2); border-color: var(--accent-analog); color: var(--accent-analog); }
-
-  .search-input {
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
-    padding: 7px 14px; border-radius: 6px;
-    outline: none; transition: border-color .2s;
-    width: 220px;
-  }
-
-  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { border-bottom: 1px solid var(--border); }
-  thead th { padding: 12px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); text-align: left; }
-  tbody tr { border-bottom: 1px solid rgba(42,42,53,0.6); transition: background .15s; }
-  tbody tr:hover { background: var(--surface2); }
-  tbody td { padding: 13px 16px; font-size: 14px; }
-
-  .money-cell { font-family: 'DM Mono', monospace; font-weight: 500; }
-  .money-cell::before { content: 'R$ '; font-size: 11px; color: var(--text-muted); }
-
-  .action-btn {
-    background: none; border: 1px solid var(--border);
-    color: var(--text-muted); cursor: pointer;
-    padding: 5px 10px; border-radius: 5px;
-    font-size: 12px; transition: all .15s;
-    font-family: 'Syne', sans-serif;
-    margin-right: 4px;
-  }
-  .action-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--text-muted); }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  th { padding: 12px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 13px 16px; border-bottom: 1px solid rgba(42,42,53,0.6); font-size: 14px; }
 
   .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-    z-index: 1000; align-items: center; justify-content: center;
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;
   }
   .modal-overlay.open { display: flex; }
-
   .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 28px; width: 520px; max-width: 95vw;
-    max-height: 90vh; overflow-y: auto;
-    position: relative;
-    animation: modalIn .2s cubic-bezier(.34,1.56,.64,1);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; width: 520px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto; position: relative;
   }
-  @keyframes modalIn { from { opacity:0; transform: scale(.93); } to { opacity:1; transform:none; } }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
   .form-group.full { grid-column: 1/-1; }
-
+  label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
   input, select, textarea {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'DM Mono', monospace; font-size: 13px;
-    padding: 9px 12px; border-radius: 7px;
-    outline: none; transition: border-color .2s;
-    width: 100%;
+    background: var(--surface2); border: 1px solid var(--border); color: #fff;
+    padding: 9px 12px; border-radius: 7px; font-family: 'DM Mono', monospace; font-size: 13px; outline: none;
   }
 
-  .type-toggle {
-    display: grid; grid-template-columns: 1fr 1fr;
-    background: var(--surface2); border-radius: 7px;
-    overflow: hidden; border: 1px solid var(--border);
-  }
-  .type-option {
-    padding: 9px; text-align: center; cursor: pointer;
-    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
-    transition: all .2s; color: var(--text-muted);
-  }
-  .type-option.selected.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
-  .type-option.selected.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
+  .btn-save { background: var(--accent-analog); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; font-family: 'Syne'; margin-top: 10px; }
+  .action-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 5px 10px; border-radius: 5px; font-size: 12px; transition: all .15s; margin-right: 4px; }
+  .action-btn.pdf-btn { color: var(--accent-analog); border-color: rgba(244,161,52,0.3); }
 
-  .btn-save {
-    background: var(--accent-analog); color: #000;
-    border: none; font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 13px; padding: 9px 24px; border-radius: var(--radius);
-    cursor: pointer;
-  }
-
-  /* MEDIA QUERIES PARA MOBILE - OTIMIZAÇÃO PEDIDA */
-  @media (max-width: 600px) {
-    header { padding: 0 16px; }
-    .header-right { gap: 8px; }
-    .btn-backup span, .btn-add span { display: none; } /* Esconde o texto, deixa o ícone/símbolo */
-    .btn-add::before { content: '+'; font-size: 18px; }
-    
-    nav { padding: 12px 16px 0; }
-    main { padding: 16px; }
-    
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .form-grid { grid-template-columns: 1fr; }
-    .form-group.full { grid-column: 1; }
-
-    /* Modal Mobile Fix */
-    .modal-overlay { align-items: center; } 
-    .modal { padding: 20px; max-height: 85vh; width: 90vw; }
-  }
-
-  /* ESTILO PDF ORIGINAL PRESERVADO */
+  .type-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
   .type-badge.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
   .type-badge.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
-  .status-badge.pendente { background: rgba(251,191,36,0.1); color: #fbbf24; }
-  .status-badge.andamento { background: rgba(59,130,246,0.1); color: #60a5fa; }
-  .status-badge.concluido { background: rgba(74,222,128,0.1); color: var(--green); }
+
+  @media (max-width: 600px) {
+    header { padding: 0 16px; }
+    .header-right span, .btn-backup span, .btn-add span { display: none; }
+    .btn-add::before { content: '+'; font-size: 18px; }
+    main { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+  }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
 </style>
 </head>
 <body>
 
 <div id="tela-login" style="display:flex; position:fixed; inset:0; z-index:9999; background:var(--bg); align-items:center; justify-content:center; flex-direction:column; gap:24px;">
-  <div style="text-align:center">
-    <div style="font-size:32px;font-weight:800;letter-spacing:0.1em;margin-bottom:6px">LAB<span style="color:var(--accent-analog)">.</span>STUDIO</div>
-    <div style="font-size:13px;color:var(--text-muted)">Sistema de Gestão</div>
-  </div>
-  <button onclick="fazerLogin()" style="background:white; color:#333; border:none; padding:12px 28px; border-radius:10px; font-family:'Syne',sans-serif; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px;">
-    <img src="https://www.google.com/favicon.ico" width="18" height="18"> Entrar com Google
-  </button>
-  <div id="login-error" style="font-size:12px;color:var(--red);min-height:18px"></div>
+    <div style="font-size:32px;font-weight:800;letter-spacing:0.1em">LAB<span style="color:var(--accent-analog)">.</span>STUDIO</div>
+    <button onclick="fazerLogin()" style="background:white; color:#333; border:none; padding:12px 28px; border-radius:10px; font-family:'Syne',sans-serif; font-weight:700; cursor:pointer;">Entrar com Google</button>
+    <div id="login-error" style="color:var(--red);font-size:12px"></div>
 </div>
 
 <div id="app-root" style="display:none">
-<header>
-  <div class="logo"><div class="logo-dot"></div>LAB<span>.</span>STUDIO</div>
-  <div class="header-right">
-    <span id="sync-status" style="font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace">⏳...</span>
-    <button class="btn-backup" onclick="exportarBackup()">⬇ <span>Backup</span></button>
-    <label class="btn-backup importar">⬆ <span>Importar</span><input type="file" onchange="importarBackup(event)" style="display:none"></label>
-    <button class="btn-add" onclick="openModal()"><span>Novo Trabalho</span></button>
-  </div>
-</header>
-
-<nav>
-  <div class="tab active" onclick="switchTab('dashboard')">◈ Dashboard</div>
-  <div class="tab" onclick="switchTab('trabalhos')">⊞ Trabalhos <span class="tab-badge" id="badge-trabalhos">0</span></div>
-  <div class="tab" onclick="switchTab('clientes')">◎ Clientes <span class="tab-badge" id="badge-clientes">0</span></div>
-  <div class="tab" onclick="switchTab('servicos')">🏷️ Catálogo</div>
-</nav>
-
-<main>
-  <!-- DASHBOARD -->
-  <div class="page active" id="page-dashboard">
-    <div class="stats-grid">
-      <div class="stat-card analog">
-        <div class="stat-label"><span class="stat-dot analog"></span>Analógico</div>
-        <div class="stat-value money" id="dash-analog">0,00</div>
-        <div class="stat-sub" id="dash-analog-count">0 trabalhos</div>
-      </div>
-      <div class="stat-card digital">
-        <div class="stat-label"><span class="stat-dot digital"></span>Digital</div>
-        <div class="stat-value money" id="dash-digital">0,00</div>
-        <div class="stat-sub" id="dash-digital-count">0 trabalhos</div>
-      </div>
-      <div class="stat-card total">
-        <div class="stat-label"><span class="stat-dot total"></span>Total Geral</div>
-        <div class="stat-value money" id="dash-total">0,00</div>
-        <div class="stat-sub" id="dash-total-count">0 trabalhos</div>
-      </div>
-      <div class="stat-card clients">
-        <div class="stat-label"><span class="stat-dot clients"></span>Clientes</div>
-        <div class="stat-value" id="dash-clients">0</div>
-        <div class="stat-sub">cadastrados</div>
-      </div>
+  <header>
+    <div class="logo"><div class="logo-dot"></div>LAB<span>.</span>STUDIO</div>
+    <div class="header-right">
+      <span id="sync-status" style="font-size:11px;color:var(--text-muted);font-family:'DM Mono'">⏳...</span>
+      <button class="btn-backup" onclick="exportarBackup()">⬇ <span>Backup</span></button>
+      <label class="btn-backup">⬆ <span>Importar</span><input type="file" onchange="importarBackup(event)" style="display:none"></label>
+      <button class="btn-add" onclick="openModal()"><span>Novo Trabalho</span></button>
     </div>
-    <div id="recent-panel"></div>
-  </div>
+  </header>
 
-  <!-- TRABALHOS -->
-  <div class="page" id="page-trabalhos">
-    <div class="filters">
-      <input class="search-input" type="text" placeholder="Buscar..." id="search-trabalhos" oninput="renderTrabalhos()">
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Cliente</th><th>Trabalho</th><th>Tipo</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead>
-        <tbody id="tbody-trabalhos"></tbody>
-      </table>
-    </div>
-  </div>
+  <nav>
+    <div class="tab active" onclick="switchTab('dashboard')">◈ Dashboard</div>
+    <div class="tab" onclick="switchTab('trabalhos')">⊞ Trabalhos <span class="tab-badge" id="badge-trabalhos">0</span></div>
+    <div class="tab" onclick="switchTab('clientes')">◎ Clientes <span class="tab-badge" id="badge-clientes">0</span></div>
+    <div class="tab" onclick="switchTab('servicos')">🏷️ Catálogo</div>
+  </nav>
 
-  <!-- CLIENTES -->
-  <div class="page" id="page-clientes">
-    <div class="filters">
-        <input class="search-input" type="text" placeholder="Buscar cliente..." id="search-clientes" oninput="renderClientes()">
-        <button class="btn-add" onclick="openClienteModal()" style="margin-left: auto;">+ Cliente</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Nome</th><th>Contato</th><th>Total Gasto</th><th>Ações</th></tr></thead>
-        <tbody id="tbody-clientes"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- CATALOGO (NOVA ABA) -->
-  <div class="page" id="page-servicos">
-    <div style="background:var(--surface); padding:20px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:20px">
-        <h3 style="margin-bottom:15px; font-size:16px">Adicionar Serviço ao Catálogo</h3>
-        <div class="form-grid">
-            <div class="form-group"><label>Nome do Serviço</label><input type="text" id="cat-nome" placeholder="Ex: Prótese Total"></div>
-            <div class="form-group"><label>Preço Sugerido (R$)</label><input type="number" id="cat-preco" step="0.01"></div>
-            <div class="form-group"><label>Tipo</label>
-                <select id="cat-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
+  <main>
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+            <div class="stat-card analog">
+                <div class="stat-label">Analógico</div>
+                <div class="stat-value money" id="dash-analog">0,00</div>
             </div>
-            <div class="form-group" style="justify-content: flex-end; display: flex;"><button class="btn-save" onclick="saveServico()">Cadastrar</button></div>
+            <div class="stat-card digital">
+                <div class="stat-label">Digital</div>
+                <div class="stat-value money" id="dash-digital">0,00</div>
+            </div>
+            <div class="stat-card" style="border-top-color: var(--green)">
+                <div class="stat-label">Total Geral</div>
+                <div class="stat-value money" id="dash-total">0,00</div>
+            </div>
+            <div class="stat-card" style="border-top-color: var(--green)">
+                <div class="stat-label">Clientes</div>
+                <div class="stat-value" id="dash-clients">0</div>
+            </div>
+        </div>
+        <div id="recent-panel"></div>
+    </div>
+
+    <!-- TRABALHOS -->
+    <div class="page" id="page-trabalhos">
+        <input type="text" id="search-trabalhos" placeholder="Buscar..." oninput="renderTrabalhos()" class="search-input" style="width:100%; max-width:400px; margin-bottom:20px">
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Cliente</th><th>Trabalho</th><th>Tipo</th><th>Valor</th><th>Ações</th></tr></thead>
+                <tbody id="tbody-trabalhos"></tbody>
+            </table>
         </div>
     </div>
-    <div class="table-wrap">
-        <table>
-            <thead><tr><th>Serviço</th><th>Tipo</th><th>Preço</th><th>Ações</th></tr></thead>
-            <tbody id="tbody-servicos"></tbody>
-        </table>
-    </div>
-  </div>
-</main>
 
-<!-- MODAL TRABALHO (ATUALIZADO COM CATALOGO) -->
-<div class="modal-overlay" id="modal-trabalho">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-title"><span id="modal-title-text">🖌️ Trabalho</span></div>
-    <input type="hidden" id="edit-id">
-    <div class="form-grid">
-      <div class="form-group full">
-        <label>Escolher do Catálogo (Preenche Automático)</label>
-        <select id="f-servico-pre" onchange="applyServicoPre()"><option value="">— Selecione ou digite abaixo —</option></select>
-      </div>
-      <div class="form-group full">
-        <label>Tipo</label>
-        <div class="type-toggle">
-          <div class="type-option selected analog" onclick="selectType('analog')" id="opt-analog">⬡ Analógico</div>
-          <div class="type-option" onclick="selectType('digital')" id="opt-digital">◈ Digital</div>
+    <!-- CLIENTES -->
+    <div class="page" id="page-clientes">
+        <button class="btn-add" onclick="openClienteModal()" style="margin-bottom:20px">+ Novo Cliente</button>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Nome</th><th>Contato</th><th>Total</th><th>Ações</th></tr></thead>
+                <tbody id="tbody-clientes"></tbody>
+            </table>
         </div>
-        <input type="hidden" id="f-tipo" value="analog">
-      </div>
-      <div class="form-group"><label>Cliente</label><select id="f-cliente"></select></div>
-      <div class="form-group"><label>Paciente</label><input type="text" id="f-paciente"></div>
-      <div class="form-group full"><label>Trabalho</label><input type="text" id="f-nome"></div>
-      <div class="form-group" id="grupo-elementos" style="display:none"><label>Elementos</label><input type="number" id="f-elementos" oninput="calcValorDigital()"></div>
-      <div class="form-group" id="grupo-valor-elemento" style="display:none"><label>Valor Un.</label><input type="number" id="f-valor-elemento" step="0.01" oninput="calcValorDigital()"></div>
-      <div class="form-group"><label>Valor Total (R$)</label><input type="number" id="f-valor" step="0.01"></div>
-      <div class="form-group"><label>Status</label>
-        <select id="f-status">
-            <option value="pendente">Pendente</option>
-            <option value="andamento">Em Andamento</option>
-            <option value="concluido">Concluído</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Data</label><input type="date" id="f-data"></div>
-      <div class="form-group full"><label>Obs</label><textarea id="f-desc"></textarea></div>
     </div>
-    <div class="form-actions"><button class="btn-save" onclick="saveTrabalho()">Salvar</button></div>
-  </div>
-</div>
 
-<!-- MODAL CLIENTE -->
-<div class="modal-overlay" id="modal-cliente">
-  <div class="modal">
-    <button class="modal-close" onclick="closeClienteModal()">✕</button>
-    <div class="modal-title">👤 Cliente</div>
-    <input type="hidden" id="ce-id">
-    <div class="form-grid">
-      <div class="form-group full"><label>Nome</label><input type="text" id="ce-nome"></div>
-      <div class="form-group"><label>Contato</label><input type="text" id="ce-contato"></div>
-      <div class="form-group"><label>Rede Social</label><input type="text" id="ce-social"></div>
-      <div class="form-group full"><label>Obs</label><textarea id="ce-obs"></textarea></div>
+    <!-- CATALOGO -->
+    <div class="page" id="page-servicos">
+        <div style="background:var(--surface); padding:20px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:20px">
+            <h4 style="margin-bottom:15px">Cadastrar Serviço e Preço</h4>
+            <div class="form-grid">
+                <div class="form-group"><label>Serviço</label><input type="text" id="s-nome"></div>
+                <div class="form-group"><label>Preço Sugerido</label><input type="number" id="s-preco" step="0.01"></div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="s-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
+                </div>
+                <button class="btn-save" onclick="saveServico()">Salvar no Catálogo</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Serviço</th><th>Preço</th><th>Ações</th></tr></thead>
+                <tbody id="tbody-servicos"></tbody>
+            </table>
+        </div>
     </div>
-    <div class="form-actions"><button class="btn-save" onclick="saveCliente()">Salvar</button></div>
-  </div>
-</div>
+  </main>
 
+  <!-- MODAL TRABALHO -->
+  <div class="modal-overlay" id="modal-trabalho">
+    <div class="modal">
+        <h3 style="margin-bottom:20px">🖌️ Novo Trabalho</h3>
+        <input type="hidden" id="edit-id">
+        <div class="form-grid">
+            <div class="form-group full">
+                <label>Usar Catálogo (Opcional)</label>
+                <select id="f-catalogo" onchange="applyCatalogo()"><option value="">— Selecionar —</option></select>
+            </div>
+            <div class="form-group full"><label>Nome do Trabalho</label><input type="text" id="f-nome"></div>
+            <div class="form-group"><label>Cliente</label><select id="f-cliente"></select></div>
+            <div class="form-group"><label>Valor (R$)</label><input type="number" id="f-valor" step="0.01"></div>
+            <div class="form-group full">
+                <label>Tipo</label>
+                <select id="f-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
+            </div>
+        </div>
+        <button class="btn-save" style="width:100%" onclick="saveTrabalho()">Salvar Trabalho</button>
+        <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:10px; cursor:pointer">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL CLIENTE -->
+  <div class="modal-overlay" id="modal-cliente">
+    <div class="modal">
+        <h3>👤 Cliente</h3>
+        <div class="form-group" style="margin-top:15px"><label>Nome</label><input type="text" id="c-nome"></div>
+        <div class="form-group"><label>Contato</label><input type="text" id="c-contato"></div>
+        <button class="btn-save" style="width:100%" onclick="saveCliente()">Salvar Cliente</button>
+        <button onclick="closeClienteModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:10px; cursor:pointer">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <script>
-// --- LOGICA CATALOGO ---
-async function saveServico() {
-    const nome = document.getElementById('cat-nome').value;
-    const preco = parseFloat(document.getElementById('cat-preco').value) || 0;
-    const tipo = document.getElementById('cat-tipo').value;
-    if(!nome) return alert('Nome do serviço é obrigatório');
-    const id = Date.now().toString(36);
-    await window._setDoc(window._userDoc('servicos', id), {id, nome, preco, tipo});
-    document.getElementById('cat-nome').value = ''; document.getElementById('cat-preco').value = '';
-}
-
-function renderServicos() {
-    const tbody = document.getElementById('tbody-servicos');
-    tbody.innerHTML = (window.servicos || []).map(s => `
-        <tr>
-            <td>${s.nome}</td>
-            <td>${s.tipo === 'analog' ? 'Analógico' : 'Digital'}</td>
-            <td class="money-cell">${fmt(s.preco)}</td>
-            <td><button class="action-btn" onclick="deleteServico('${s.id}')">✕</button></td>
-        </tr>
-    `).join('');
-}
-
-async function deleteServico(id) {
-    if(confirm('Excluir do catálogo?')) await window._deleteDoc(window._userDoc('servicos', id));
-}
-
-function populateServicoSelect() {
-    const sel = document.getElementById('f-servico-pre');
-    sel.innerHTML = '<option value="">— Selecione ou digite abaixo —</option>' +
-    window.servicos.map(s => `<option value="${s.id}">${s.nome} (R$ ${fmt(s.preco)})</option>`).join('');
-}
-
-function applyServicoPre() {
-    const id = document.getElementById('f-servico-pre').value;
-    const s = window.servicos.find(x => x.id === id);
-    if(s) {
-        document.getElementById('f-nome').value = s.nome;
-        document.getElementById('f-valor').value = s.preco;
-        selectType(s.tipo);
-    }
-}
-
-// --- LOGICA ORIGINAL PRESERVADA ---
 window.trabalhos = []; window.clientes = []; window.servicos = [];
-let filterAtivo = 'todos';
+const fmt = (n) => Number(n).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.innerText.toLowerCase().includes(tab)));
-  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
-  if (tab === 'trabalhos') renderTrabalhos();
-  if (tab === 'clientes')  renderClientes();
-  if (tab === 'dashboard') renderDashboard();
-  if (tab === 'servicos') renderServicos();
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    event.currentTarget.classList.add('active');
+    if(tab === 'trabalhos') renderTrabalhos();
+    if(tab === 'clientes') renderClientes();
+    if(tab === 'servicos') renderServicos();
 }
 
-function openModal(id) {
-  const m = document.getElementById('modal-trabalho');
-  m.classList.add('open');
-  const sel = document.getElementById('f-cliente');
-  sel.innerHTML = '<option value="">— Selecionar —</option>' + window.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-  if (!id) {
-    document.getElementById('edit-id').value = ''; document.getElementById('f-nome').value = '';
-    document.getElementById('f-valor').value = ''; selectType('analog');
-    document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
-  } else {
-    const t = trabalhos.find(x => x.id === id);
-    document.getElementById('edit-id').value = t.id;
-    document.getElementById('f-nome').value = t.nome;
-    document.getElementById('f-valor').value = t.valor;
-    document.getElementById('f-cliente').value = t.clienteId;
-    selectType(t.tipo);
-  }
+// CATALOGO
+async function saveServico() {
+    const nome = document.getElementById('s-nome').value;
+    const preco = parseFloat(document.getElementById('s-preco').value) || 0;
+    const tipo = document.getElementById('s-tipo').value;
+    if(!nome) return alert('Nome obrigatório');
+    const id = Date.now().toString();
+    await window._setDoc(window._userDoc('servicos', id), {id, nome, preco, tipo});
+    document.getElementById('s-nome').value = ''; document.getElementById('s-preco').value = '';
+}
+function renderServicos() {
+    const tbody = document.getElementById('tbody-servicos');
+    tbody.innerHTML = window.servicos.map(s => `<tr><td>${s.nome}</td><td>R$ ${fmt(s.preco)}</td><td><button class="action-btn" onclick="deleteServico('${s.id}')">✕</button></td></tr>`).join('');
+    const sel = document.getElementById('f-catalogo');
+    sel.innerHTML = '<option value="">— Selecionar do Catálogo —</option>' + window.servicos.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+}
+async function deleteServico(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('servicos', id)); }
+function applyCatalogo() {
+    const sId = document.getElementById('f-catalogo').value;
+    const s = window.servicos.find(x => x.id === sId);
+    if(s) { document.getElementById('f-nome').value = s.nome; document.getElementById('f-valor').value = s.preco; document.getElementById('f-tipo').value = s.tipo; }
 }
 
-function closeModal() { document.getElementById('modal-trabalho').classList.remove('open'); }
-function selectType(tipo) {
-  document.getElementById('f-tipo').value = tipo;
-  document.getElementById('opt-analog').className = 'type-option' + (tipo === 'analog' ? ' selected analog' : '');
-  document.getElementById('opt-digital').className = 'type-option' + (tipo === 'digital' ? ' selected digital' : '');
-  document.getElementById('grupo-elementos').style.display = tipo === 'digital' ? '' : 'none';
-  document.getElementById('grupo-valor-elemento').style.display = tipo === 'digital' ? '' : 'none';
+// CLIENTES
+function openClienteModal() { document.getElementById('modal-cliente').classList.add('open'); }
+function closeClienteModal() { document.getElementById('modal-cliente').classList.remove('open'); }
+async function saveCliente() {
+    const nome = document.getElementById('c-nome').value;
+    if(!nome) return;
+    const id = Date.now().toString();
+    await window._setDoc(window._userDoc('clientes', id), {id, nome, contato: document.getElementById('c-contato').value});
+    closeClienteModal();
 }
-
-function calcValorDigital() {
-  const q = parseFloat(document.getElementById('f-elementos').value) || 0;
-  const v = parseFloat(document.getElementById('f-valor-elemento').value) || 0;
-  if (q && v) document.getElementById('f-valor').value = (q * v).toFixed(2);
-}
-
-async function saveTrabalho() {
-  const nome = document.getElementById('f-nome').value;
-  if (!nome) return alert('Nome obrigatório');
-  const id = document.getElementById('edit-id').value || Date.now().toString();
-  const obj = {
-    id, nome, 
-    valor: parseFloat(document.getElementById('f-valor').value) || 0,
-    tipo: document.getElementById('f-tipo').value,
-    clienteId: document.getElementById('f-cliente').value,
-    status: document.getElementById('f-status').value,
-    data: document.getElementById('f-data').value,
-    criadoEm: Date.now()
-  };
-  await window._setDoc(window._userDoc('trabalhos', id), obj);
-  closeModal();
-}
-
-// Funções de Render (Trabalhos, Clientes, Dash) mantidas idênticas à Versão Final fornecida...
-function renderTrabalhos() {
-  const tbody = document.getElementById('tbody-trabalhos');
-  tbody.innerHTML = window.trabalhos.map(t => {
-    const c = window.clientes.find(x => x.id === t.clienteId);
-    return `<tr>
-      <td>${c ? c.nome : '—'}</td>
-      <td>${t.nome}</td>
-      <td><span class="type-badge ${t.tipo}">${t.tipo}</span></td>
-      <td><span class="status-badge ${t.status}">${t.status}</span></td>
-      <td class="money-cell">${fmt(t.valor)}</td>
-      <td><button class="action-btn" onclick="openModal('${t.id}')">✎</button></td>
-    </tr>`;
-  }).join('');
-}
-
 function renderClientes() {
-  const tbody = document.getElementById('tbody-clientes');
-  tbody.innerHTML = window.clientes.map(c => `
-    <tr>
-      <td><b>${c.nome}</b></td>
-      <td>${c.contato || '—'}</td>
-      <td class="money-cell">${fmt(window.trabalhos.filter(t=>t.clienteId===c.id).reduce((s,t)=>s+t.valor,0))}</td>
-      <td>
-        <button class="action-btn pdf-btn" onclick="exportClientePDF('${c.id}')">PDF</button>
-        <button class="action-btn" onclick="openClienteModal('${c.id}')">✎</button>
-      </td>
-    </tr>
-  `).join('');
+    const tbody = document.getElementById('tbody-clientes');
+    tbody.innerHTML = window.clientes.map(c => {
+        const total = window.trabalhos.filter(t => t.clienteId === c.id).reduce((s,t) => s + t.valor, 0);
+        return `<tr><td><b>${c.nome}</b></td><td>${c.contato || '-'}</td><td>R$ ${fmt(total)}</td><td><button class="action-btn pdf-btn" onclick="exportClientePDF('${c.id}')">PDF</button><button class="action-btn" onclick="deleteCliente('${c.id}')">✕</button></td></tr>`;
+    }).join('');
 }
+async function deleteCliente(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('clientes', id)); }
 
+// TRABALHOS
+function openModal() {
+    document.getElementById('modal-trabalho').classList.add('open');
+    const sel = document.getElementById('f-cliente');
+    sel.innerHTML = '<option value="">Selecionar Cliente</option>' + window.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+}
+function closeModal() { document.getElementById('modal-trabalho').classList.remove('open'); }
+async function saveTrabalho() {
+    const nome = document.getElementById('f-nome').value;
+    const id = Date.now().toString();
+    await window._setDoc(window._userDoc('trabalhos', id), {
+        id, nome, valor: parseFloat(document.getElementById('f-valor').value) || 0,
+        clienteId: document.getElementById('f-cliente').value, tipo: document.getElementById('f-tipo').value, criadoEm: Date.now()
+    });
+    closeModal();
+}
+function renderTrabalhos() {
+    const tbody = document.getElementById('tbody-trabalhos');
+    tbody.innerHTML = window.trabalhos.map(t => {
+        const c = window.clientes.find(x => x.id === t.clienteId);
+        return `<tr><td>${c?c.nome:'-'}</td><td>${t.nome}</td><td><span class="type-badge ${t.tipo}">${t.tipo}</span></td><td>R$ ${fmt(t.valor)}</td><td><button class="action-btn" onclick="deleteTrabalho('${t.id}')">✕</button></td></tr>`;
+    }).join('');
+}
+async function deleteTrabalho(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('trabalhos', id)); }
+
+// DASHBOARD
 function renderDashboard() {
-  const totA = window.trabalhos.filter(t=>t.tipo==='analog').reduce((s,t)=>s+t.valor,0);
-  const totD = window.trabalhos.filter(t=>t.tipo==='digital').reduce((s,t)=>s+t.valor,0);
-  document.getElementById('dash-analog').textContent = fmt(totA);
-  document.getElementById('dash-digital').textContent = fmt(totD);
-  document.getElementById('dash-total').textContent = fmt(totA + totD);
-  document.getElementById('dash-clients').textContent = window.clientes.length;
+    const totA = window.trabalhos.filter(t => t.tipo === 'analog').reduce((s,t) => s + t.valor, 0);
+    const totD = window.trabalhos.filter(t => t.tipo === 'digital').reduce((s,t) => s + t.valor, 0);
+    document.getElementById('dash-analog').textContent = fmt(totA);
+    document.getElementById('dash-digital').textContent = fmt(totD);
+    document.getElementById('dash-total').textContent = fmt(totA + totD);
+    document.getElementById('dash-clients').textContent = window.clientes.length;
 }
-
 function updateBadges() {
-  document.getElementById('badge-trabalhos').textContent = window.trabalhos.length;
-  document.getElementById('badge-clientes').textContent = window.clientes.length;
+    document.getElementById('badge-trabalhos').textContent = window.trabalhos.length;
+    document.getElementById('badge-clientes').textContent = window.clientes.length;
 }
 
-function fmt(n) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
-
-// PDF ORIGINAL RESTAURADO
+// PDF ORIGINAL
 window.exportClientePDF = function(clienteId) {
   const { jsPDF } = window.jspdf;
   const c = window.clientes.find(x => x.id === clienteId);
   const works = window.trabalhos.filter(t => t.clienteId === clienteId);
   const doc = new jsPDF();
-  const W = 210;
-  doc.setFillColor(14, 14, 16); doc.rect(0, 0, W, 40, 'F');
-  doc.setTextColor(244, 161, 52); doc.setFontSize(20); doc.text('LAB.STUDIO', 20, 20);
-  doc.setTextColor(255, 255, 255); doc.setFontSize(12); doc.text(c.nome, 20, 30);
-  doc.autoTable({
-    startY: 50,
-    head: [['Trabalho', 'Tipo', 'Valor', 'Data']],
-    body: works.map(t => [t.nome, t.tipo, 'R$ '+fmt(t.valor), t.data]),
-    theme: 'grid', headStyles: {fillColor: [30, 30, 30]}
-  });
+  const W = 210; const margin = 18;
+
+  doc.setFillColor(14, 14, 16); doc.rect(0, 0, W, 42, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(244, 161, 52); doc.text('LAB.STUDIO', margin, 16);
+  doc.setFontSize(9); doc.setTextColor(152, 152, 176); doc.text('Relatório de Cliente', margin, 23);
+  doc.setFontSize(14); doc.setTextColor(232, 232, 240); doc.text(c.nome, margin, 34);
+
+  const totA = works.filter(t=>t.tipo==='analog').reduce((s,t)=>s+t.valor,0);
+  const totD = works.filter(t=>t.tipo==='digital').reduce((s,t)=>s+t.valor,0);
+
+  doc.setFillColor(30, 24, 14); doc.roundedRect(margin, 50, 50, 20, 2, 2, 'F');
+  doc.setTextColor(244, 161, 52); doc.setFontSize(7); doc.text('ANALÓGICO', margin+4, 56);
+  doc.setFontSize(10); doc.text('R$ '+fmt(totA), margin+4, 64);
+
+  doc.setFillColor(14, 18, 28); doc.roundedRect(margin+55, 50, 50, 20, 2, 2, 'F');
+  doc.setTextColor(59, 158, 255); doc.setFontSize(7); doc.text('DIGITAL', margin+59, 56);
+  doc.setFontSize(10); doc.text('R$ '+fmt(totD), margin+59, 64);
+
+  doc.autoTable({ startY: 80, head: [['Serviço', 'Tipo', 'Valor']], body: works.map(t => [t.nome, t.tipo, 'R$ '+fmt(t.valor)]), theme: 'grid', headStyles: {fillColor:[30,30,30]} });
   doc.save(`Relatorio_${c.nome}.pdf`);
 }
 
-// CLIENTE MODAL
-function openClienteModal(id) {
-    const m = document.getElementById('modal-cliente');
-    m.classList.add('open');
-    if(!id) {
-        document.getElementById('ce-id').value = ''; document.getElementById('ce-nome').value = '';
-    } else {
-        const c = window.clientes.find(x => x.id === id);
-        document.getElementById('ce-id').value = c.id;
-        document.getElementById('ce-nome').value = c.nome;
-    }
-}
-function closeClienteModal() { document.getElementById('modal-cliente').classList.remove('open'); }
-async function saveCliente() {
-    const nome = document.getElementById('ce-nome').value;
-    const id = document.getElementById('ce-id').value || Date.now().toString();
-    await window._setDoc(window._userDoc('clientes', id), {id, nome, contato: document.getElementById('ce-contato').value});
-    closeClienteModal();
-}
-
 window.exportarBackup = function() {
-  const blob = new Blob([JSON.stringify({trabalhos, clientes, servicos})], {type: 'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click();
+    const blob = new Blob([JSON.stringify({trabalhos, clientes, servicos})], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click();
+}
+window.importarBackup = function(e) {
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        const d = JSON.parse(ev.target.result);
+        for(let c of d.clientes||[]) await window._setDoc(window._userDoc('clientes', c.id), c);
+        for(let s of d.servicos||[]) await window._setDoc(window._userDoc('servicos', s.id), s);
+        for(let t of d.trabalhos||[]) await window._setDoc(window._userDoc('trabalhos', t.id), t);
+        alert('Importado!');
+    };
+    reader.readAsText(e.target.files[0]);
 }
 </script>
 </body>
