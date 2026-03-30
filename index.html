@@ -631,35 +631,19 @@ onAuthStateChanged(auth, user => {
   .modal-tab-panel { display: none; margin-top: 0; }
   .modal-tab-panel.active { display: block; }
 
-  /* Seletor de preços chips */
-  .preco-picker {
+  /* Seletor de preços dropdown */
+  .preco-select-row {
+    display: flex; align-items: center; gap: 10px;
     padding: 10px 0 8px;
-    display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
   }
-  .preco-picker-label {
+  .preco-select-row label {
     font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-muted);
-    padding-top: 4px; white-space: nowrap; flex-shrink: 0;
+    white-space: nowrap; flex-shrink: 0;
   }
-  .preco-chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
+  .preco-select-row select {
+    flex: 1; padding: 7px 10px; font-size: 12px;
   }
-  .preco-chip {
-    display: flex; align-items: center; gap: 5px;
-    padding: 4px 10px; border-radius: 20px;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-    cursor: pointer; transition: all .15s;
-    border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text-muted);
-    user-select: none;
-  }
-  .preco-chip:hover { border-color: var(--text-muted); color: var(--text); }
-  .preco-chip.analog { border-color: rgba(244,161,52,0.4); color: var(--accent-analog); background: var(--accent-analog-dim); }
-  .preco-chip.digital { border-color: rgba(59,158,255,0.4); color: var(--accent-digital); background: var(--accent-digital-dim); }
-  .preco-chip .chip-val {
-    font-family: 'DM Mono', monospace; font-size: 10px; opacity: 0.8;
-  }
-  .preco-chip-empty { font-size: 11px; color: var(--text-muted); font-style: italic; padding: 4px 0; }
 
   /* Col headers */
   .items-col-headers {
@@ -1084,9 +1068,11 @@ onAuthStateChanged(auth, user => {
     <!-- Painel Analógico -->
     <div class="modal-tab-panel active" id="mpanel-analog">
       <!-- Seletor de tabela de preços (analógico) -->
-      <div class="preco-picker" id="preco-picker-analog">
-        <div class="preco-picker-label">Da tabela de preços:</div>
-        <div class="preco-chips" id="preco-chips-analog"></div>
+      <div class="preco-select-row">
+        <label>Da tabela de preços:</label>
+        <select id="preco-sel-analog" onchange="aplicarPrecoSelect('analog')">
+          <option value="">— Selecionar serviço —</option>
+        </select>
       </div>
       <div class="items-col-headers">
         <span>Trabalho</span><span>Qtd</span><span>Vlr Unit (R$)</span><span>Subtotal</span><span></span>
@@ -1100,9 +1086,11 @@ onAuthStateChanged(auth, user => {
     <!-- Painel Digital -->
     <div class="modal-tab-panel" id="mpanel-digital">
       <!-- Seletor de tabela de preços (digital) -->
-      <div class="preco-picker" id="preco-picker-digital">
-        <div class="preco-picker-label">Da tabela de preços:</div>
-        <div class="preco-chips" id="preco-chips-digital"></div>
+      <div class="preco-select-row">
+        <label>Da tabela de preços:</label>
+        <select id="preco-sel-digital" onchange="aplicarPrecoSelect('digital')">
+          <option value="">— Selecionar serviço —</option>
+        </select>
       </div>
       <div class="items-col-headers">
         <span>Trabalho</span><span>Qtd</span><span>Vlr Unit (R$)</span><span>Subtotal</span><span></span>
@@ -1189,7 +1177,7 @@ onAuthStateChanged(auth, user => {
       </div>
       <div class="form-group">
         <label>Tipo</label>
-        <select id="pr-tipo">
+        <select id="pr-tipo" onchange="toggleContaElemento()">
           <option value="analog">Analógico / Acrílico</option>
           <option value="digital">Digital</option>
         </select>
@@ -1201,6 +1189,16 @@ onAuthStateChanged(auth, user => {
       <div class="form-group full">
         <label>Observações</label>
         <input type="text" id="pr-obs" placeholder="Ex: tamanho, complexidade...">
+      </div>
+      <!-- Só aparece para tipo Digital -->
+      <div class="form-group full" id="grupo-conta-elemento" style="display:none">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:13px;letter-spacing:0;font-weight:600;color:var(--text)">
+          <input type="checkbox" id="pr-conta-elemento" style="width:16px;height:16px;accent-color:var(--accent-digital);cursor:pointer">
+          Conta como elemento desenhado
+        </label>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;padding-left:26px">
+          Marque se este item deve ser somado ao contador de elementos no dashboard. Deixe desmarcado para finalizações, modelos impressos, etc.
+        </div>
       </div>
     </div>
     <div class="form-actions">
@@ -1276,6 +1274,12 @@ function switchTab(tab) {
 }
 
 // ─── MODAL PREÇO ─────────────────────────────────────
+function toggleContaElemento() {
+  const tipo = document.getElementById('pr-tipo').value;
+  document.getElementById('grupo-conta-elemento').style.display = tipo === 'digital' ? '' : 'none';
+  if (tipo !== 'digital') document.getElementById('pr-conta-elemento').checked = false;
+}
+
 function openPrecoModal(id) {
   document.getElementById('modal-preco').classList.add('open');
   if (!id) {
@@ -1284,6 +1288,7 @@ function openPrecoModal(id) {
     document.getElementById('pr-valor').value = '';
     document.getElementById('pr-obs').value   = '';
     document.getElementById('pr-tipo').value  = 'analog';
+    document.getElementById('pr-conta-elemento').checked = false;
     document.getElementById('preco-modal-title').textContent = 'Novo Preço';
   } else {
     const p = precos.find(x => x.id === id);
@@ -1293,8 +1298,10 @@ function openPrecoModal(id) {
     document.getElementById('pr-valor').value = p.valor;
     document.getElementById('pr-obs').value   = p.obs || '';
     document.getElementById('pr-tipo').value  = p.tipo;
+    document.getElementById('pr-conta-elemento').checked = !!p.contaElemento;
     document.getElementById('preco-modal-title').textContent = 'Editar Preço';
   }
+  toggleContaElemento();
 }
 
 function closePrecoModal() {
@@ -1306,11 +1313,12 @@ async function savePreco() {
   const valor = parseFloat(document.getElementById('pr-valor').value) || 0;
   const tipo  = document.getElementById('pr-tipo').value;
   const obs   = document.getElementById('pr-obs').value.trim();
+  const contaElemento = tipo === 'digital' && document.getElementById('pr-conta-elemento').checked;
   const editId = document.getElementById('pr-id').value;
   if (!nome) { alert('Informe o nome do serviço.'); return; }
   const obj = editId
-    ? { ...(precos.find(x=>x.id===editId)||{}), id: editId, nome, valor, tipo, obs }
-    : { id: uid(), nome, valor, tipo, obs };
+    ? { ...(precos.find(x=>x.id===editId)||{}), id: editId, nome, valor, tipo, obs, contaElemento }
+    : { id: uid(), nome, valor, tipo, obs, contaElemento };
   await savePrecoFB(obj);
   closePrecoModal();
 }
@@ -1332,7 +1340,11 @@ function renderPrecos() {
     <div class="preco-card">
       <div class="preco-card-info">
         <span class="preco-card-nome">${p.nome}</span>
-        <span class="preco-card-tipo"><span class="type-badge ${p.tipo}" style="font-size:10px;padding:2px 7px">${p.tipo==='analog'?'Analógico':'Digital'}</span>${p.obs?` · ${p.obs}`:''}</span>
+        <span class="preco-card-tipo">
+          <span class="type-badge ${p.tipo}" style="font-size:10px;padding:2px 7px">${p.tipo==='analog'?'Analógico':'Digital'}</span>
+          ${p.tipo==='digital' && p.contaElemento ? '<span style="font-size:10px;color:var(--accent-digital);margin-left:4px">✦ elemento</span>' : ''}
+          ${p.obs?` · ${p.obs}`:''}
+        </span>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <span class="preco-card-val">R$ ${fmt(p.valor)}</span>
@@ -1394,28 +1406,28 @@ function switchModalTab(tipo) {
   });
 }
 
-function popularPrecosChips() {
+function popularPrecosSelects() {
   ['analog','digital'].forEach(tipo => {
-    const container = document.getElementById('preco-chips-' + tipo);
+    const sel = document.getElementById('preco-sel-' + tipo);
+    if (!sel) return;
     const lista = (window.precos || []).filter(p => p.tipo === tipo);
-    if (!lista.length) {
-      container.innerHTML = '<span class="preco-chip-empty">Nenhum preço cadastrado para este tipo.</span>';
-      return;
-    }
-    container.innerHTML = lista.map(p =>
-      `<button type="button" class="preco-chip ${tipo}" onclick="aplicarPrecoChip('${p.id}','${tipo}')" title="R$ ${fmt(p.valor)}${p.obs ? ' · ' + p.obs : ''}">
-        ${p.nome} <span class="chip-val">R$ ${fmt(p.valor)}</span>
-      </button>`
-    ).join('');
+    sel.innerHTML = '<option value="">— Selecionar serviço —</option>';
+    lista.forEach(p => {
+      const elementoTag = (tipo === 'digital' && p.contaElemento) ? ' ✦' : '';
+      sel.innerHTML += `<option value="${p.id}">${p.nome} — R$ ${fmt(p.valor)}${elementoTag}</option>`;
+    });
   });
 }
 
-function aplicarPrecoChip(precoId, tipo) {
-  const p = (window.precos || []).find(x => x.id === precoId);
+function aplicarPrecoSelect(tipo) {
+  const sel = document.getElementById('preco-sel-' + tipo);
+  const id = sel.value;
+  if (!id) return;
+  const p = (window.precos || []).find(x => x.id === id);
   if (!p) return;
-  addItemRow(tipo, { nome: p.nome, qtd: 1, valorUnit: p.valor, subtotal: p.valor });
-  // Switch to the tab so user sees the added item
-  switchModalTab(tipo);
+  addItemRow(tipo, { nome: p.nome, qtd: 1, valorUnit: p.valor, subtotal: p.valor, precoId: p.id, contaElemento: !!p.contaElemento });
+  // Reset select after adding
+  sel.value = '';
 }
 
 function addItemRow(tipo, item) {
@@ -1428,11 +1440,13 @@ function addItemRow(tipo, item) {
   const qty   = item ? (item.qtd || 1) : 1;
   const vunit = item ? (item.valorUnit != null ? item.valorUnit : '') : '';
   const sub   = (qty && vunit !== '') ? (qty * parseFloat(vunit)).toFixed(2) : '';
+  const contaElemento = item ? (!!item.contaElemento) : false;
 
   const row = document.createElement('div');
   row.className = 'item-row';
   row.dataset.tipo = tipo;
   row.dataset.rowId = rowId;
+  row.dataset.contaElemento = contaElemento ? '1' : '0';
   row.innerHTML = `
     <input type="text" placeholder="Nome do trabalho..." value="${escHtml(nome)}" oninput="recalcTotals()" data-field="nome">
     <div class="item-qty-wrap">
@@ -1524,7 +1538,8 @@ function getItemsFromModal(tipo) {
     const nome  = row.querySelector('[data-field="nome"]').value.trim();
     const qty   = parseFloat(row.querySelector('[data-field="qtd"]').value) || 1;
     const vunit = parseFloat(row.querySelector('[data-field="valorUnit"]').value) || 0;
-    if (nome || vunit > 0) items.push({ nome, qtd: qty, valorUnit: vunit, subtotal: qty * vunit });
+    const contaElemento = row.dataset.contaElemento === '1';
+    if (nome || vunit > 0) items.push({ nome, qtd: qty, valorUnit: vunit, subtotal: qty * vunit, contaElemento });
   });
   return items;
 }
@@ -1552,7 +1567,7 @@ function openModal(id) {
   clearItemsList('analog');
   clearItemsList('digital');
   switchModalTab('analog');
-  popularPrecosChips();
+  popularPrecosSelects();
 
   if (!id) {
     document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
@@ -1622,8 +1637,10 @@ async function saveTrabalho() {
 
   // Determine primary tipo (for backwards compat display)
   const tipo = itemsDigital.length && !itemsAnalog.length ? 'digital' : 'analog';
-  // Total elementos digitais
-  const elementos = itemsDigital.reduce((s, i) => s + (i.qtd || 1), 0);
+  // Total elementos digitais — apenas itens marcados como "conta elemento"
+  const elementos = itemsDigital
+    .filter(i => i.contaElemento)
+    .reduce((s, i) => s + (i.qtd || 1), 0);
 
   const payload = {
     nome: nomePrincipal,
@@ -1843,7 +1860,17 @@ function renderDashboard() {
   document.getElementById('dash-clients').textContent       = clientes.length;
   document.getElementById('dash-clients-sub').textContent   = clientes.length === 1 ? 'cadastrado' : 'cadastrados';
 
-  const totalElementos = trabalhos.filter(t=>t.tipo==='digital').reduce((s,t)=>s+(t.elementos||0),0);
+  // Elementos digitais — apenas itens marcados como "conta elemento"
+  const totalElementos = trabalhos
+    .filter(t => t.tipo === 'digital' || (t.itemsDigital && t.itemsDigital.length))
+    .reduce((s, t) => {
+      // Novo formato: soma só os itens com contaElemento
+      if (t.itemsDigital && t.itemsDigital.length) {
+        return s + t.itemsDigital.filter(i => i.contaElemento).reduce((a, i) => a + (i.qtd || 1), 0);
+      }
+      // Formato antigo: usa o campo elementos diretamente
+      return s + (t.elementos || 0);
+    }, 0);
   document.getElementById('dash-elementos').textContent     = totalElementos;
   document.getElementById('dash-elementos-sub').textContent = totalElementos === 1 ? 'desenhado' : 'desenhados';
 
@@ -2188,7 +2215,8 @@ window.changeQty         = changeQty;
 window.removeItemRow     = removeItemRow;
 window.onSubtotalEdit    = onSubtotalEdit;
 window.recalcTotals      = recalcTotals;
-window.aplicarPrecoChip  = aplicarPrecoChip;
+window.aplicarPrecoSelect = aplicarPrecoSelect;
+window.toggleContaElemento = toggleContaElemento;
 window.saveTrabalho      = saveTrabalho;
 window.deleteTrabalho    = deleteTrabalho;
 window.openClienteModal  = openClienteModal;
