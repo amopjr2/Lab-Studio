@@ -408,6 +408,7 @@ onAuthStateChanged(auth, user => {
   .status-badge.pendente { background: rgba(251,191,36,0.1); color: #fbbf24; }
   .status-badge.andamento { background: rgba(59,130,246,0.1); color: #60a5fa; }
   .status-badge.concluido { background: rgba(74,222,128,0.1); color: var(--green); }
+  .status-badge.pago { background: rgba(74,222,128,0.1); color: var(--green); }
   .status-badge.cancelado { background: rgba(248,113,113,0.1); color: var(--red); }
 
   .money-cell { font-family: 'DM Mono', monospace; font-weight: 500; }
@@ -694,28 +695,39 @@ onAuthStateChanged(auth, user => {
   <!-- ── DASHBOARD ── -->
   <div class="page active" id="page-dashboard">
 
+    <!-- Seletor de mês -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase">Visão Geral</div>
+      <input type="month" id="dash-mes" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 12px;border-radius:6px;outline:none;" onchange="renderDashboard()">
+    </div>
+
     <div class="stats-grid">
       <div class="stat-card analog">
-        <div class="stat-label"><span class="stat-dot analog"></span>Analógico / Acrílico</div>
+        <div class="stat-label"><span class="stat-dot analog"></span>Analógico (mês)</div>
         <div class="stat-value money" id="dash-analog">0,00</div>
         <div class="stat-sub" id="dash-analog-count">0 trabalhos</div>
       </div>
       <div class="stat-card digital">
-        <div class="stat-label"><span class="stat-dot digital"></span>Digital</div>
+        <div class="stat-label"><span class="stat-dot digital"></span>Digital (mês)</div>
         <div class="stat-value money" id="dash-digital">0,00</div>
         <div class="stat-sub" id="dash-digital-count">0 trabalhos</div>
       </div>
       <div class="stat-card total">
-        <div class="stat-label"><span class="stat-dot total"></span>Total Geral</div>
+        <div class="stat-label"><span class="stat-dot total"></span>Total do Mês</div>
         <div class="stat-value money" id="dash-total">0,00</div>
         <div class="stat-sub" id="dash-total-count">0 trabalhos</div>
+      </div>
+      <div class="stat-card" style="border-top-color:#f87171">
+        <div class="stat-label"><span class="stat-dot" style="background:#f87171"></span>A Receber</div>
+        <div class="stat-value money" id="dash-areceber" style="color:#f87171">0,00</div>
+        <div class="stat-sub" id="dash-areceber-sub">concluídos não pagos</div>
       </div>
       <div class="stat-card clients">
         <div class="stat-label"><span class="stat-dot clients"></span>Clientes</div>
         <div class="stat-value" id="dash-clients">0</div>
         <div class="stat-sub" id="dash-clients-sub">cadastrados</div>
       </div>
-      <div class="stat-card digital" style="border-top-color: #a78bfa">
+      <div class="stat-card digital" style="border-top-color:#a78bfa">
         <div class="stat-label"><span class="stat-dot" style="background:#a78bfa"></span>Elementos Digitais</div>
         <div class="stat-value" id="dash-elementos" style="color:#a78bfa">0</div>
         <div class="stat-sub" id="dash-elementos-sub">desenhados</div>
@@ -726,7 +738,7 @@ onAuthStateChanged(auth, user => {
 
       <div>
         <div class="section-header" style="margin-bottom:12px">
-          <div class="section-title">Receita por Tipo</div>
+          <div class="section-title">Receita por Tipo (mês)</div>
         </div>
         <div class="panel">
           <div class="bar-chart" id="bar-chart">
@@ -734,9 +746,13 @@ onAuthStateChanged(auth, user => {
               <div class="bar-label"><span>Analógico / Acrílico</span><span id="bc-analog">R$ 0,00</span></div>
               <div class="bar-track"><div class="bar-fill analog" id="bf-analog" style="width:0%"></div></div>
             </div>
-            <div class="bar-row" style="margin:0">
+            <div class="bar-row">
               <div class="bar-label"><span>Digital</span><span id="bc-digital">R$ 0,00</span></div>
               <div class="bar-track"><div class="bar-fill digital" id="bf-digital" style="width:0%"></div></div>
+            </div>
+            <div class="bar-row" style="margin:0">
+              <div class="bar-label"><span style="color:var(--text-muted);font-size:11px">▲ Mês anterior</span><span id="bc-anterior">R$ 0,00</span></div>
+              <div class="bar-track"><div class="bar-fill" id="bf-anterior" style="width:0%;background:var(--border)"></div></div>
             </div>
           </div>
         </div>
@@ -757,11 +773,24 @@ onAuthStateChanged(auth, user => {
             <span>Concluído</span><span class="val" id="st-concluido">0</span>
           </div>
           <div class="panel-row">
+            <span style="color:var(--green)">Pago ✓</span><span class="val" id="st-pago" style="color:var(--green)">0</span>
+          </div>
+          <div class="panel-row">
             <span>Cancelado</span><span class="val" id="st-cancelado">0</span>
           </div>
         </div>
       </div>
 
+    </div>
+
+    <!-- Gráfico dos últimos 6 meses -->
+    <div style="margin-top:20px">
+      <div class="section-header" style="margin-bottom:12px">
+        <div class="section-title">Receita — Últimos 6 Meses</div>
+      </div>
+      <div class="panel">
+        <div class="bar-chart" id="grafico-mensal" style="padding:18px"></div>
+      </div>
     </div>
 
     <div style="margin-top: 20px">
@@ -801,6 +830,8 @@ onAuthStateChanged(auth, user => {
       <button class="filter-btn" onclick="setFilter('pendente')" id="f-pendente">Pendente</button>
       <button class="filter-btn" onclick="setFilter('andamento')" id="f-andamento">Andamento</button>
       <button class="filter-btn" onclick="setFilter('concluido')" id="f-concluido">Concluído</button>
+      <button class="filter-btn" onclick="setFilter('pago')" id="f-pago">Pago ✓</button>
+      <input type="month" id="f-mes" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;border-radius:6px;outline:none;" onchange="renderTrabalhos()" title="Filtrar por mês">
     </div>
 
     <div class="table-wrap">
@@ -929,6 +960,7 @@ onAuthStateChanged(auth, user => {
           <option value="pendente">Pendente</option>
           <option value="andamento">Em Andamento</option>
           <option value="concluido">Concluído</option>
+          <option value="pago">Pago ✓</option>
           <option value="cancelado">Cancelado</option>
         </select>
       </div>
@@ -1184,8 +1216,7 @@ function setFilter(f) {
   filterAtivo = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','digital'));
   const btn = document.getElementById('f-' + f);
-  btn.classList.add('active');
-  if (f === 'digital') btn.classList.add('digital');
+  if (btn) { btn.classList.add('active'); if (f === 'digital') btn.classList.add('digital'); }
   renderTrabalhos();
 }
 
@@ -1359,13 +1390,16 @@ function renderTrabalhos() {
     const c = clientes.find(x => x.id === t.clienteId);
     const cNome = c ? c.nome.toLowerCase() : '';
     const matchQ = !q || t.nome.toLowerCase().includes(q) || cNome.includes(q);
+    const mesFiltro = document.getElementById('f-mes')?.value || '';
+    const matchMes  = !mesFiltro || (t.data && t.data.slice(0,7) === mesFiltro);
     let matchF = true;
-    if (filterAtivo === 'analog') matchF = t.tipo === 'analog';
-    else if (filterAtivo === 'digital') matchF = t.tipo === 'digital';
-    else if (filterAtivo === 'pendente') matchF = t.status === 'pendente';
+    if (filterAtivo === 'analog')    matchF = t.tipo === 'analog';
+    else if (filterAtivo === 'digital')   matchF = t.tipo === 'digital';
+    else if (filterAtivo === 'pendente')  matchF = t.status === 'pendente';
     else if (filterAtivo === 'andamento') matchF = t.status === 'andamento';
     else if (filterAtivo === 'concluido') matchF = t.status === 'concluido';
-    return matchQ && matchF;
+    else if (filterAtivo === 'pago')      matchF = t.status === 'pago';
+    return matchQ && matchF && matchMes;
   });
 
   // totals for filtered
@@ -1434,37 +1468,81 @@ function renderClientes() {
 
 // ─── RENDER DASHBOARD ────────────────────────────────
 function renderDashboard() {
-  const analog  = trabalhos.filter(t=>t.tipo==='analog');
-  const digital = trabalhos.filter(t=>t.tipo==='digital');
-  const totA = analog.reduce((s,t)=>s+t.valor,0);
-  const totD = digital.reduce((s,t)=>s+t.valor,0);
-  const totG = totA + totD;
+  // mês selecionado ou mês atual
+  const mesSel = document.getElementById('dash-mes')?.value || new Date().toISOString().slice(0,7);
+  if (document.getElementById('dash-mes') && !document.getElementById('dash-mes').value) {
+    document.getElementById('dash-mes').value = mesSel;
+  }
 
-  document.getElementById('dash-analog').textContent       = fmt(totA);
-  document.getElementById('dash-analog-count').textContent = analog.length + ' trabalhos';
+  // filtra trabalhos do mês selecionado
+  const doMes    = trabalhos.filter(t => t.data && t.data.slice(0,7) === mesSel);
+  const analog   = doMes.filter(t => t.tipo === 'analog');
+  const digital  = doMes.filter(t => t.tipo === 'digital');
+  const totA     = analog.reduce((s,t)=>s+t.valor,0);
+  const totD     = digital.reduce((s,t)=>s+t.valor,0);
+  const totG     = totA + totD;
+
+  // mês anterior
+  const [ano, mes] = mesSel.split('-').map(Number);
+  const mesAntD    = new Date(ano, mes-2, 1);
+  const mesAnt     = `${mesAntD.getFullYear()}-${String(mesAntD.getMonth()+1).padStart(2,'0')}`;
+  const doMesAnt   = trabalhos.filter(t => t.data && t.data.slice(0,7) === mesAnt);
+  const totAnt     = doMesAnt.reduce((s,t)=>s+t.valor,0);
+
+  // a receber = concluído mas não pago (todos os tempos)
+  const aReceber = trabalhos.filter(t => t.status === 'concluido').reduce((s,t)=>s+t.valor,0);
+
+  document.getElementById('dash-analog').textContent        = fmt(totA);
+  document.getElementById('dash-analog-count').textContent  = analog.length + ' trabalho' + (analog.length!==1?'s':'');
   document.getElementById('dash-digital').textContent       = fmt(totD);
-  document.getElementById('dash-digital-count').textContent = digital.length + ' trabalhos';
+  document.getElementById('dash-digital-count').textContent = digital.length + ' trabalho' + (digital.length!==1?'s':'');
   document.getElementById('dash-total').textContent         = fmt(totG);
-  document.getElementById('dash-total-count').textContent   = trabalhos.length + ' trabalhos';
+  document.getElementById('dash-total-count').textContent   = doMes.length + ' trabalho' + (doMes.length!==1?'s':'');
+  document.getElementById('dash-areceber').textContent      = fmt(aReceber);
+  document.getElementById('dash-areceber-sub').textContent  = trabalhos.filter(t=>t.status==='concluido').length + ' concluídos não pagos';
   document.getElementById('dash-clients').textContent       = clientes.length;
   document.getElementById('dash-clients-sub').textContent   = clientes.length === 1 ? 'cadastrado' : 'cadastrados';
 
-  // elementos digitais
   const totalElementos = trabalhos.filter(t=>t.tipo==='digital').reduce((s,t)=>s+(t.elementos||0),0);
   document.getElementById('dash-elementos').textContent     = totalElementos;
   document.getElementById('dash-elementos-sub').textContent = totalElementos === 1 ? 'desenhado' : 'desenhados';
 
-  // bar chart
-  const mx = Math.max(totA, totD) || 1;
-  document.getElementById('bc-analog').textContent = 'R$ ' + fmt(totA);
-  document.getElementById('bc-digital').textContent = 'R$ ' + fmt(totD);
-  document.getElementById('bf-analog').style.width  = (totA/mx*100) + '%';
-  document.getElementById('bf-digital').style.width = (totD/mx*100) + '%';
+  // barras receita mês
+  const mx = Math.max(totA, totD, totAnt) || 1;
+  document.getElementById('bc-analog').textContent   = 'R$ ' + fmt(totA);
+  document.getElementById('bc-digital').textContent  = 'R$ ' + fmt(totD);
+  document.getElementById('bc-anterior').textContent = 'R$ ' + fmt(totAnt);
+  document.getElementById('bf-analog').style.width   = (totA/mx*100) + '%';
+  document.getElementById('bf-digital').style.width  = (totD/mx*100) + '%';
+  document.getElementById('bf-anterior').style.width = (totAnt/mx*100) + '%';
 
-  // status counts
-  ['pendente','andamento','concluido','cancelado'].forEach(s => {
-    document.getElementById('st-'+s).textContent = trabalhos.filter(t=>t.status===s).length;
+  // status counts (todos os tempos)
+  ['pendente','andamento','concluido','pago','cancelado'].forEach(s => {
+    const el = document.getElementById('st-'+s);
+    if (el) el.textContent = trabalhos.filter(t=>t.status===s).length;
   });
+
+  // gráfico últimos 6 meses
+  const meses6 = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(ano, mes-1-i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    const total = trabalhos.filter(t=>t.data&&t.data.slice(0,7)===key).reduce((s,t)=>s+t.valor,0);
+    meses6.push({ key, label, total });
+  }
+  const maxMes = Math.max(...meses6.map(m=>m.total)) || 1;
+  const grafico = document.getElementById('grafico-mensal');
+  grafico.innerHTML = meses6.map(m => `
+    <div class="bar-row" style="margin-bottom:12px">
+      <div class="bar-label">
+        <span style="${m.key===mesSel?'color:var(--accent-analog);font-weight:700':''}">${m.label}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:12px">R$ ${fmt(m.total)}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${m.key===mesSel?'analog':'digital'}" style="width:${(m.total/maxMes*100)}%;opacity:${m.key===mesSel?1:0.5}"></div>
+      </div>
+    </div>`).join('');
 
   // recentes
   const recent = [...trabalhos].sort((a,b)=>b.criadoEm-a.criadoEm).slice(0,6);
@@ -1479,10 +1557,8 @@ function renderDashboard() {
           <span class="name">${t.nome}</span>
           <span style="font-size:11px;color:var(--text-muted);margin-left:8px">${c?c.nome:''}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 8px">
-            ${t.tipo==='analog'?'Analógico':'Digital'}
-          </span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="status-badge ${t.status}" style="font-size:10px;padding:2px 7px">${statusLabel(t.status)}</span>
           <span class="val">R$ ${fmt(t.valor)}</span>
         </div>
       </div>`;
@@ -1507,7 +1583,7 @@ function formatDate(d) {
   return `${day}/${m}/${y}`;
 }
 function statusLabel(s) {
-  return { pendente: 'Pendente', andamento: 'Andamento', concluido: 'Concluído', cancelado: 'Cancelado' }[s] || s;
+  return { pendente: 'Pendente', andamento: 'Andamento', concluido: 'Concluído', pago: 'Pago ✓', cancelado: 'Cancelado' }[s] || s;
 }
 
 // close modal on overlay click
@@ -1517,13 +1593,27 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 
 // ─── EXPORT PDF ──────────────────────────────────────
 function exportClientePDF(clienteId) {
-  const { jsPDF } = window.jspdf;
   const c = clientes.find(x => x.id === clienteId);
   if (!c) return;
 
-  const works = trabalhos.filter(t => t.clienteId === clienteId);
+  // Pedir período
+  const hoje = new Date().toISOString().split('T')[0];
+  const primeiroDia = hoje.slice(0,7) + '-01';
+  const dataIni = prompt('Data inicial (AAAA-MM-DD):', primeiroDia);
+  if (!dataIni) return;
+  const dataFim = prompt('Data final (AAAA-MM-DD):', hoje);
+  if (!dataFim) return;
+
+  const { jsPDF } = window.jspdf;
+
+  const works = trabalhos.filter(t =>
+    t.clienteId === clienteId &&
+    t.data >= dataIni && t.data <= dataFim
+  ).sort((a,b) => a.data.localeCompare(b.data));
+
   const totAnalog  = works.filter(t=>t.tipo==='analog').reduce((s,t)=>s+t.valor,0);
   const totDigital = works.filter(t=>t.tipo==='digital').reduce((s,t)=>s+t.valor,0);
+  const totPago    = works.filter(t=>t.status==='pago').reduce((s,t)=>s+t.valor,0);
   const totGeral   = totAnalog + totDigital;
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -1542,13 +1632,13 @@ function exportClientePDF(clienteId) {
 
   doc.setFontSize(9);
   doc.setTextColor(152, 152, 176);
-  doc.text('Relatório de Cliente', margin, 23);
+  doc.text(`Período: ${formatDate(dataIni)} a ${formatDate(dataFim)}`, margin, 23);
 
   // date top right
-  const hoje = new Date().toLocaleDateString('pt-BR');
+  const hoje2 = new Date().toLocaleDateString('pt-BR');
   doc.setFontSize(8);
   doc.setTextColor(107, 107, 128);
-  doc.text('Emitido em ' + hoje, W - margin, 16, { align: 'right' });
+  doc.text('Emitido em ' + hoje2, W - margin, 16, { align: 'right' });
 
   // ── Client name ──
   doc.setFont('helvetica', 'bold');
@@ -1627,6 +1717,14 @@ function exportClientePDF(clienteId) {
 
   infoY += 30;
 
+  // Box pago
+  doc.setFillColor(14, 22, 16);
+  doc.roundedRect(margin, infoY, W - margin*2, 14, 2, 2, 'F');
+  doc.setFontSize(8); doc.setTextColor(74, 222, 128);
+  doc.text(`✓ Pago: R$ ${fmt(totPago)}   |   Pendente/Concluído: R$ ${fmt(totGeral - totPago)}`, margin + 4, infoY + 9);
+
+  infoY += 20;
+
   // ── Works table ──
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
@@ -1646,7 +1744,7 @@ function exportClientePDF(clienteId) {
       head: [['#', 'Trabalho', 'Tipo', 'Status', 'Valor', 'Data']],
       body: works.map((t, i) => [
         String(i + 1).padStart(3, '0'),
-        t.nome,
+        t.nome + (t.paciente ? `\nPaciente: ${t.paciente}` : ''),
         t.tipo === 'analog' ? 'Analógico' : 'Digital',
         statusLabel(t.status),
         'R$ ' + fmt(t.valor),
