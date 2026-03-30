@@ -103,6 +103,15 @@ onAuthStateChanged(auth, user => {
       }
     });
 
+    const unsubPrecos = onSnapshot(userCol('precos'), snap => {
+      window.precos = [];
+      snap.forEach(d => window.precos.push(d.data()));
+      window.precos.sort((a,b) => a.nome.localeCompare(b.nome));
+      if (window._appReady) {
+        window.renderPrecos(); window.updateBadges();
+      }
+    });
+
     window._appReady = true;
     window.renderDashboard();
     window.updateBadges();
@@ -573,15 +582,44 @@ onAuthStateChanged(auth, user => {
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
   @media (max-width: 600px) {
-    nav { padding: 12px 16px 0; gap: 0; }
-    main { padding: 16px; }
-    header { padding: 0 16px; }
-    .tab { padding: 10px 14px; font-size: 12px; }
+    nav { padding: 12px 16px 0; gap: 0; overflow-x: auto; }
+    main { padding: 12px; }
+    header { padding: 0 12px; height: auto; flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+    .logo { font-size: 15px; }
+    .header-right { gap: 6px; flex-wrap: wrap; width: 100%; justify-content: flex-end; }
+    .btn-backup { padding: 6px 10px; font-size: 11px; }
+    .btn-add { padding: 7px 12px; font-size: 12px; }
+    #sync-status { display: none; }
+    .tab { padding: 10px 12px; font-size: 11px; white-space: nowrap; }
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: 1; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .totals-bar { grid-template-columns: 1fr; }
+    .dual-col { grid-template-columns: 1fr; }
+    .modal { padding: 20px 16px; width: 100%; max-width: 100%; margin: 0; border-radius: 16px 16px 0 0; max-height: 92vh; }
+    .modal-overlay { align-items: flex-end; }
   }
+
+  /* Tabela de preços */
+  .preco-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .preco-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: border-color .2s;
+  }
+  .preco-card:hover { border-color: var(--text-muted); }
+  .preco-card-info { display: flex; flex-direction: column; gap: 3px; }
+  .preco-card-nome { font-size: 13px; font-weight: 700; }
+  .preco-card-tipo { font-size: 11px; color: var(--text-muted); }
+  .preco-card-val { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 600; color: var(--green); }
 </style>
 </head>
 <body>
@@ -622,24 +660,20 @@ onAuthStateChanged(auth, user => {
     LAB<span>.</span>STUDIO
   </div>
   <div class="header-right">
-    <span id="sync-status" style="font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace">⏳ Conectando...</span>
-    <button id="btn-logout" onclick="window._signOut()" style="display:none;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 14px;border-radius:var(--radius);font-family:'Syne',sans-serif;font-weight:600;font-size:12px;cursor:pointer;align-items:center;gap:5px;transition:all .2s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">⎋ Sair</button>
-    <button class="btn-backup" onclick="exportarBackup()" title="Exportar backup">⬇ Backup</button>
-    <label class="btn-backup importar" title="Importar backup">
-      ⬆ Importar
+    <span id="sync-status" style="font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace">⏳</span>
+    <button id="btn-logout" onclick="window._signOut()" style="display:none;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 12px;border-radius:var(--radius);font-family:'Syne',sans-serif;font-weight:600;font-size:12px;cursor:pointer;align-items:center;gap:5px;transition:all .2s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">⎋ Sair</button>
+    <button class="btn-backup" onclick="exportarBackup()" title="Backup">⬇</button>
+    <label class="btn-backup importar" title="Importar">
+      ⬆
       <input type="file" accept=".json" onchange="importarBackup(event)" style="display:none">
     </label>
-    <button class="btn-add" onclick="openModal()">
-      + Novo Trabalho
-    </button>
+    <button class="btn-add" onclick="openModal()">+ Trabalho</button>
   </div>
 </header>
 
 <!-- NAV -->
 <nav>
-  <div class="tab active" onclick="switchTab('dashboard')">
-    ◈ Dashboard
-  </div>
+  <div class="tab active" onclick="switchTab('dashboard')">◈ Dashboard</div>
   <div class="tab" onclick="switchTab('trabalhos')">
     ⊞ Trabalhos
     <span class="tab-badge" id="badge-trabalhos">0</span>
@@ -647,6 +681,10 @@ onAuthStateChanged(auth, user => {
   <div class="tab" onclick="switchTab('clientes')">
     ◎ Clientes
     <span class="tab-badge" id="badge-clientes">0</span>
+  </div>
+  <div class="tab" onclick="switchTab('precos')">
+    ◑ Preços
+    <span class="tab-badge" id="badge-precos">0</span>
   </div>
 </nav>
 
@@ -813,6 +851,17 @@ onAuthStateChanged(auth, user => {
     </div>
   </div>
 
+  <!-- ── PREÇOS ── -->
+  <div class="page" id="page-precos">
+    <div class="filters">
+      <input class="search-input" type="text" placeholder="Buscar serviço..." id="search-precos" oninput="renderPrecos()">
+      <button class="btn-add" onclick="openPrecoModal()" style="margin-left:auto">+ Novo Preço</button>
+    </div>
+    <div id="preco-grid-container">
+      <div class="empty"><div class="empty-icon">💰</div>Nenhum preço cadastrado</div>
+    </div>
+  </div>
+
 </main>
 
 <!-- ── MODAL TRABALHO ── -->
@@ -844,6 +893,13 @@ onAuthStateChanged(auth, user => {
       <div class="form-group">
         <label>Nome do Paciente</label>
         <input type="text" id="f-paciente" placeholder="Ex: Maria Silva">
+      </div>
+
+      <div class="form-group full">
+        <label>Tabela de Preços (opcional)</label>
+        <select id="f-preco-sel" onchange="aplicarPrecoTabela()">
+          <option value="">— Selecionar da tabela —</option>
+        </select>
       </div>
 
       <div class="form-group full">
@@ -926,6 +982,40 @@ onAuthStateChanged(auth, user => {
   </div>
 </div>
 
+<!-- ── MODAL PREÇO ── -->
+<div class="modal-overlay" id="modal-preco">
+  <div class="modal">
+    <button class="modal-close" onclick="closePrecoModal()">✕</button>
+    <div class="modal-title">◑ <span id="preco-modal-title">Novo Preço</span></div>
+    <input type="hidden" id="pr-id">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nome do Serviço</label>
+        <input type="text" id="pr-nome" placeholder="Ex: Retrato A4, Logo simples, Ícone...">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="pr-tipo">
+          <option value="analog">Analógico / Acrílico</option>
+          <option value="digital">Digital</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="pr-valor" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group full">
+        <label>Observações</label>
+        <input type="text" id="pr-obs" placeholder="Ex: tamanho, complexidade...">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closePrecoModal()">Cancelar</button>
+      <button class="btn-save" onclick="savePreco()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- fim #app-root -->
 
 <script>
@@ -933,6 +1023,7 @@ onAuthStateChanged(auth, user => {
 // Arrays em memória — populados pelo listener Firebase em tempo real
 window.trabalhos = window.trabalhos || [];
 window.clientes  = window.clientes  || [];
+window.precos    = window.precos    || [];
 let filterAtivo = 'todos';
 
 function uid() {
@@ -963,10 +1054,22 @@ async function deleteClienteFB(id) {
   } catch(e) { console.error('Erro ao deletar:', e); }
 }
 
-// ─── TABS ────────────────────────────────────────────
+async function savePrecoFB(obj) {
+  try {
+    await window._setDoc(window._userDoc('precos', obj.id), obj);
+  } catch(e) { console.error('Erro ao salvar preço:', e); alert('Erro ao salvar.'); }
+}
+
+async function deletePrecoFB(id) {
+  try {
+    await window._deleteDoc(window._userDoc('precos', id));
+  } catch(e) { console.error('Erro ao deletar preço:', e); }
+}
+
+
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    const pages = ['dashboard','trabalhos','clientes'];
+    const pages = ['dashboard','trabalhos','clientes','precos'];
     t.classList.toggle('active', pages[i] === tab);
   });
   document.querySelectorAll('.page').forEach(p => {
@@ -975,6 +1078,105 @@ function switchTab(tab) {
   if (tab === 'trabalhos') renderTrabalhos();
   if (tab === 'clientes')  renderClientes();
   if (tab === 'dashboard') renderDashboard();
+  if (tab === 'precos')    renderPrecos();
+}
+
+// ─── MODAL PREÇO ─────────────────────────────────────
+function openPrecoModal(id) {
+  document.getElementById('modal-preco').classList.add('open');
+  if (!id) {
+    document.getElementById('pr-id').value    = '';
+    document.getElementById('pr-nome').value  = '';
+    document.getElementById('pr-valor').value = '';
+    document.getElementById('pr-obs').value   = '';
+    document.getElementById('pr-tipo').value  = 'analog';
+    document.getElementById('preco-modal-title').textContent = 'Novo Preço';
+  } else {
+    const p = precos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('pr-id').value    = p.id;
+    document.getElementById('pr-nome').value  = p.nome;
+    document.getElementById('pr-valor').value = p.valor;
+    document.getElementById('pr-obs').value   = p.obs || '';
+    document.getElementById('pr-tipo').value  = p.tipo;
+    document.getElementById('preco-modal-title').textContent = 'Editar Preço';
+  }
+}
+
+function closePrecoModal() {
+  document.getElementById('modal-preco').classList.remove('open');
+}
+
+async function savePreco() {
+  const nome  = document.getElementById('pr-nome').value.trim();
+  const valor = parseFloat(document.getElementById('pr-valor').value) || 0;
+  const tipo  = document.getElementById('pr-tipo').value;
+  const obs   = document.getElementById('pr-obs').value.trim();
+  const editId = document.getElementById('pr-id').value;
+  if (!nome) { alert('Informe o nome do serviço.'); return; }
+  const obj = editId
+    ? { ...(precos.find(x=>x.id===editId)||{}), id: editId, nome, valor, tipo, obs }
+    : { id: uid(), nome, valor, tipo, obs };
+  await savePrecoFB(obj);
+  closePrecoModal();
+}
+
+async function deletePreco(id) {
+  if (!confirm('Remover este preço?')) return;
+  await deletePrecoFB(id);
+}
+
+function renderPrecos() {
+  const q = (document.getElementById('search-precos')?.value || '').toLowerCase();
+  const container = document.getElementById('preco-grid-container');
+  const list = precos.filter(p => !q || p.nome.toLowerCase().includes(q));
+  if (!list.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">💰</div>Nenhum preço cadastrado</div>';
+    return;
+  }
+  container.innerHTML = `<div class="preco-grid">${list.map(p => `
+    <div class="preco-card">
+      <div class="preco-card-info">
+        <span class="preco-card-nome">${p.nome}</span>
+        <span class="preco-card-tipo"><span class="type-badge ${p.tipo}" style="font-size:10px;padding:2px 7px">${p.tipo==='analog'?'Analógico':'Digital'}</span>${p.obs?` · ${p.obs}`:''}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="preco-card-val">R$ ${fmt(p.valor)}</span>
+        <div>
+          <button class="action-btn" onclick="openPrecoModal('${p.id}')">✎</button>
+          <button class="action-btn del" onclick="deletePreco('${p.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function popularSeletorPrecos() {
+  const sel = document.getElementById('f-preco-sel');
+  if (!sel) return;
+  const tipo = document.getElementById('f-tipo').value;
+  const filtrados = precos.filter(p => p.tipo === tipo);
+  sel.innerHTML = '<option value="">— Selecionar da tabela —</option>';
+  filtrados.forEach(p => {
+    sel.innerHTML += `<option value="${p.id}">${p.nome} — R$ ${fmt(p.valor)}</option>`;
+  });
+}
+
+function aplicarPrecoTabela() {
+  const sel = document.getElementById('f-preco-sel');
+  const id  = sel.value;
+  if (!id) return;
+  const p = precos.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('f-nome').value  = p.nome;
+  document.getElementById('f-valor').value = p.valor;
+  if (p.tipo === 'digital' && p.obs) {
+    document.getElementById('f-desc').value = p.obs;
+  }
+}
+
+function updateBadgePrecos() {
+  const el = document.getElementById('badge-precos');
+  if (el) el.textContent = precos.length;
 }
 
 // ─── FILTER ──────────────────────────────────────────
@@ -999,6 +1201,9 @@ function openModal(id) {
   clientes.forEach(c => {
     sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
   });
+
+  // popular seletor de preços
+  popularSeletorPrecos();
 
   // default date
   if (!id) {
@@ -1051,6 +1256,7 @@ function selectType(tipo) {
     document.getElementById('f-elementos').value = '';
     document.getElementById('f-valor-elemento').value = '';
   }
+  popularSeletorPrecos();
 }
 
 function calcValorDigital() {
@@ -1288,6 +1494,7 @@ function renderDashboard() {
 function updateBadges() {
   document.getElementById('badge-trabalhos').textContent = trabalhos.length;
   document.getElementById('badge-clientes').textContent  = clientes.length;
+  updateBadgePrecos();
 }
 
 // ─── HELPERS ─────────────────────────────────────────
@@ -1550,6 +1757,13 @@ window.renderTrabalhos   = renderTrabalhos;
 window.renderClientes    = renderClientes;
 window.renderDashboard   = renderDashboard;
 window.updateBadges      = updateBadges;
+window.openPrecoModal    = openPrecoModal;
+window.closePrecoModal   = closePrecoModal;
+window.savePreco         = savePreco;
+window.deletePreco       = deletePreco;
+window.renderPrecos      = renderPrecos;
+window.aplicarPrecoTabela = aplicarPrecoTabela;
+window.updateBadgePrecos = updateBadgePrecos;
 </script>
 
 <script>
