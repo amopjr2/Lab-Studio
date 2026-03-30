@@ -9,6 +9,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="LAB.STUDIO">
 <title>LAB — Sistema de Gestão</title>
+<link rel="manifest" href="data:application/json,{
+  %22name%22:%22LAB.STUDIO%22,
+  %22short_name%22:%22LAB%22,
+  %22description%22:%22Sistema de Gest%C3%A3o de Trabalhos%22,
+  %22start_url%22:%22.%22,
+  %22display%22:%22standalone%22,
+  %22background_color%22:%22%230e0e10%22,
+  %22theme_color%22:%22%230e0e10%22,
+  %22icons%22:[{%22src%22:%22https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f3a8.png%22,%22sizes%22:%2272x72%22,%22type%22:%22image/png%22},{%22src%22:%22https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f3a8.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]
+}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -31,50 +41,82 @@ const db       = getFirestore(app);
 const auth     = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-function userCol(colName) { return collection(db, 'usuarios', window._uid, colName); }
-function userDoc(colName, id) { return doc(db, 'usuarios', window._uid, colName, id); }
+let unsubTrabalhos = null;
+let unsubClientes  = null;
 
-window.fazerLogin = async () => {
-  try { await signInWithPopup(auth, provider); } catch(e) { document.getElementById('login-error').textContent = 'Erro ao fazer login.'; }
-};
-
-onAuthStateChanged(auth, user => {
-  if (user) {
-    window._uid = user.uid;
-    document.getElementById('tela-login').style.display = 'none';
-    document.getElementById('app-root').style.display = 'block';
-    document.getElementById('sync-status').textContent = '🟢 ' + (user.displayName || 'Online');
-
-    onSnapshot(userCol('trabalhos'), snap => {
-      window.trabalhos = []; snap.forEach(d => window.trabalhos.push(d.data()));
-      window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
-      refreshUI();
-    });
-    onSnapshot(userCol('clientes'), snap => {
-      window.clientes = []; snap.forEach(d => window.clientes.push(d.data()));
-      refreshUI();
-    });
-    onSnapshot(userCol('servicos'), snap => {
-      window.servicos = []; snap.forEach(d => window.servicos.push(d.data()));
-      refreshUI();
-    });
-  } else {
-    document.getElementById('tela-login').style.display = 'flex';
-    document.getElementById('app-root').style.display = 'none';
-  }
-});
-
-function refreshUI() {
-    if(window.renderDashboard) window.renderDashboard();
-    if(window.renderTrabalhos) window.renderTrabalhos();
-    if(window.renderClientes)  window.renderClientes();
-    if(window.renderServicos)  window.renderServicos();
-    if(window.updateBadges)    window.updateBadges();
+// ── Helpers para coleções do usuário logado ──
+function userCol(colName) {
+  return collection(db, 'usuarios', window._uid, colName);
+}
+function userDoc(colName, id) {
+  return doc(db, 'usuarios', window._uid, colName, id);
 }
 
-window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDoc; window._signOut = () => signOut(auth);
-</script>
+// ── Expõe ao escopo global ──
+window._db        = db;
+window._auth      = auth;
+window._signOut   = () => signOut(auth);
+window._setDoc    = setDoc;
+window._deleteDoc = deleteDoc;
+window._userDoc   = userDoc;
 
+// ── Login Google — qualquer conta ──
+window.fazerLogin = async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    document.getElementById('login-error').textContent = 'Erro ao fazer login. Tente novamente.';
+  }
+};
+
+// ── Observa autenticação ──
+onAuthStateChanged(auth, user => {
+  // Cancela listeners anteriores se existirem
+  if (unsubTrabalhos) { unsubTrabalhos(); unsubTrabalhos = null; }
+  if (unsubClientes)  { unsubClientes();  unsubClientes  = null; }
+  window._appReady = false;
+
+  if (user) {
+    window._uid = user.uid;
+
+    document.getElementById('tela-login').style.display = 'none';
+    document.getElementById('app-root').style.display   = 'block';
+    document.getElementById('sync-status').textContent  = '🟢 ' + (user.displayName || user.email);
+    document.getElementById('sync-status').style.color  = 'var(--green)';
+    document.getElementById('btn-logout').style.display = 'flex';
+
+    // Listeners nos dados do usuário específico
+    unsubTrabalhos = onSnapshot(userCol('trabalhos'), snap => {
+      window.trabalhos = [];
+      snap.forEach(d => window.trabalhos.push(d.data()));
+      window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
+      if (window._appReady) {
+        window.renderDashboard(); window.renderTrabalhos(); window.updateBadges();
+      }
+    });
+
+    unsubClientes = onSnapshot(userCol('clientes'), snap => {
+      window.clientes = [];
+      snap.forEach(d => window.clientes.push(d.data()));
+      if (window._appReady) {
+        window.renderDashboard(); window.renderClientes(); window.updateBadges();
+      }
+    });
+
+    window._appReady = true;
+    window.renderDashboard();
+    window.updateBadges();
+
+  } else {
+    window._uid = null;
+    window.trabalhos = [];
+    window.clientes  = [];
+    document.getElementById('tela-login').style.display = 'flex';
+    document.getElementById('app-root').style.display   = 'none';
+    document.getElementById('btn-logout').style.display = 'none';
+  }
+});
+</script>
 <style>
   :root {
     --bg: #0e0e10;
@@ -93,388 +135,1453 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
     --radius: 10px;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
-  body::before {
-    content: ''; position: fixed; inset: 0;
-    background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
+  /* GRID NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
   header {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(14,14,16,0.85); backdrop-filter: blur(16px);
+    background: rgba(14,14,16,0.85);
+    backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
-    padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 65px;
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
   }
-  .logo { font-size: 18px; font-weight: 800; letter-spacing: 0.12em; }
-  .logo span { color: var(--accent-analog); }
 
-  .header-right { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    font-size: 18px; font-weight: 800; letter-spacing: 0.12em;
+    color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo span { color: var(--accent-analog); }
+  .logo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-analog);
+    box-shadow: 0 0 10px var(--accent-analog);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: .3; }
+  }
+
+  .header-right {
+    display: flex; align-items: center; gap: 16px;
+  }
 
   .btn-backup {
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
-    padding: 8px 14px; border-radius: var(--radius); font-weight: 600; font-size: 12px; cursor: pointer;
-    display: flex; align-items: center; gap: 6px; transition: all .2s;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 5px;
   }
+  .btn-backup:hover { border-color: var(--text-muted); color: var(--text); background: var(--surface); }
+  .btn-backup.importar { color: var(--accent-digital); border-color: rgba(59,158,255,0.3); }
+  .btn-backup.importar:hover { background: var(--accent-digital-dim); border-color: var(--accent-digital); }
+
   .btn-add {
-    background: var(--accent-analog); color: #000; border: none; padding: 10px 18px;
-    border-radius: var(--radius); font-weight: 700; font-size: 13px; cursor: pointer;
+    background: var(--accent-analog);
+    color: #000;
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--radius);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all .2s;
     display: flex; align-items: center; gap: 6px;
   }
+  .btn-add:hover { opacity: .85; transform: translateY(-1px); }
 
-  nav { display: flex; gap: 4px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); position: relative; z-index: 1; overflow-x: auto; scrollbar-width: none; }
-  nav::-webkit-scrollbar { display: none; }
-  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+  /* ── NAV TABS ── */
+  nav {
+    display: flex; gap: 4px;
+    padding: 16px 32px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative; z-index: 1;
+  }
+  .tab {
+    padding: 10px 20px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tab:hover { color: var(--text-dim); }
   .tab.active { color: var(--text); border-color: var(--accent-analog); }
+  .tab-badge {
+    background: var(--surface2);
+    padding: 2px 7px; border-radius: 20px;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .tab.active .tab-badge { background: var(--accent-analog-dim); color: var(--accent-analog); }
 
-  main { padding: 28px 32px; position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; }
+  /* ── MAIN ── */
+  main {
+    padding: 28px 32px;
+    position: relative; z-index: 1;
+    max-width: 1400px;
+  }
+
+  /* ── PAGES ── */
   .page { display: none; }
   .page.active { display: block; animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
 
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); border-top: 2px solid var(--accent-analog); }
-  .stat-value { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; margin-top: 5px; }
+  /* ── DASHBOARD CARDS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
 
-  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; margin-top: 15px; }
-  table { width: 100%; border-collapse: collapse; min-width: 600px; }
-  th { padding: 14px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: left; border-bottom: 1px solid var(--border); }
-  td { padding: 14px 16px; border-bottom: 1px solid rgba(42,42,53,0.5); font-size: 14px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative; overflow: hidden;
+    transition: border-color .2s;
+  }
+  .stat-card:hover { border-color: var(--text-muted); }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .stat-card.analog::before { background: var(--accent-analog); }
+  .stat-card.digital::before { background: var(--accent-digital); }
+  .stat-card.total::before { background: linear-gradient(90deg, var(--accent-analog), var(--accent-digital)); }
+  .stat-card.clients::before { background: var(--green); }
 
+  .stat-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .stat-dot.analog { background: var(--accent-analog); }
+  .stat-dot.digital { background: var(--accent-digital); }
+  .stat-dot.total { background: var(--green); }
+  .stat-dot.clients { background: var(--green); }
+
+  .stat-value {
+    font-size: 28px; font-weight: 800; letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .stat-value.money::before { content: 'R$ '; font-size: 14px; font-weight: 500; color: var(--text-muted); }
+  .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 15px; font-weight: 700; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .pill {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 0.06em;
+  }
+  .pill.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
+  .pill.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
+
+  /* ── FILTERS ── */
+  .filters {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 6px;
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s; letter-spacing: 0.04em;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .filter-btn:hover { border-color: var(--text-muted); color: var(--text); }
+  .filter-btn.active { background: var(--surface2); border-color: var(--accent-analog); color: var(--accent-analog); }
+  .filter-btn.active.digital { border-color: var(--accent-digital); color: var(--accent-digital); }
+
+  .search-input {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+    padding: 7px 14px; border-radius: 6px;
+    outline: none; transition: border-color .2s;
+    width: 220px;
+  }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-input:focus { border-color: var(--text-muted); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap table {
+    min-width: 600px;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  thead th {
+    padding: 12px 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted);
+    text-align: left;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(42,42,53,0.6);
+    transition: background .15s;
+  }
+  tbody tr:last-child { border: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 13px 16px;
+    font-size: 14px;
+  }
+
+  .client-name { font-weight: 600; }
+  .client-id { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  .type-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .type-badge.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
+  .type-badge.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
+  .type-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+  .status-badge.pendente { background: rgba(251,191,36,0.1); color: #fbbf24; }
+  .status-badge.andamento { background: rgba(59,130,246,0.1); color: #60a5fa; }
+  .status-badge.concluido { background: rgba(74,222,128,0.1); color: var(--green); }
+  .status-badge.cancelado { background: rgba(248,113,113,0.1); color: var(--red); }
+
+  .money-cell { font-family: 'DM Mono', monospace; font-weight: 500; }
+  .money-cell::before { content: 'R$ '; font-size: 11px; color: var(--text-muted); }
+
+  .action-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-muted); cursor: pointer;
+    padding: 5px 10px; border-radius: 5px;
+    font-size: 12px; transition: all .15s;
+    font-family: 'Syne', sans-serif;
+    margin-right: 4px;
+  }
+  .action-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--text-muted); }
+  .action-btn.del:hover { border-color: var(--red); color: var(--red); background: rgba(248,113,113,0.05); }
+
+  /* ── MODAL ── */
   .modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center;
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 1000; align-items: center; justify-content: center;
   }
   .modal-overlay.open { display: flex; }
+
   .modal {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw;
-    max-height: 90vh; overflow-y: auto; position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px; width: 520px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+    position: relative;
+    animation: modalIn .2s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes modalIn { from { opacity:0; transform: scale(.93); } to { opacity:1; transform:none; } }
+
+  .modal-title {
+    font-size: 18px; font-weight: 800; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
   }
 
-  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-  label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+  .modal-close {
+    position: absolute; top: 20px; right: 20px;
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 20px; padding: 4px 8px;
+    border-radius: 5px; transition: all .15s;
+    line-height: 1;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1/-1; }
+
+  label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+
   input, select, textarea {
-    background: var(--surface2); border: 1px solid var(--border); color: #fff;
-    padding: 12px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 14px; outline: none; width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    padding: 9px 12px; border-radius: 7px;
+    outline: none; transition: border-color .2s;
+    width: 100%;
   }
+  input::placeholder, textarea::placeholder { color: var(--text-muted); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent-analog); }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 70px; }
 
-  .btn-save { width: 100%; padding: 14px; background: var(--accent-analog); color: #000; border: none; border-radius: 10px; font-weight: 800; cursor: pointer; margin-top: 10px; font-family: 'Syne'; }
-  .action-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin-right: 4px; }
-  .action-btn.pdf { color: var(--accent-analog); border-color: var(--accent-analog-dim); }
+  .type-toggle {
+    display: grid; grid-template-columns: 1fr 1fr;
+    background: var(--surface2); border-radius: 7px;
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .type-option {
+    padding: 9px; text-align: center; cursor: pointer;
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.06em; transition: all .2s;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .type-option.selected.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
+  .type-option.selected.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
 
-  @media (max-width: 768px) {
-    header { padding: 0 16px; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+  .btn-cancel {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-muted); font-family: 'Syne', sans-serif; font-weight: 600;
+    font-size: 13px; padding: 9px 20px; border-radius: var(--radius);
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-save {
+    background: var(--accent-analog); color: #000;
+    border: none; font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 13px; padding: 9px 24px; border-radius: var(--radius);
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-save:hover { opacity: .85; }
+
+  /* ── DUAL COLUMN DASHBOARD ── */
+  .dual-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .dual-col { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-row {
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(42,42,53,0.5);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px;
+  }
+  .panel-row:last-child { border: none; }
+  .panel-row .name { font-weight: 600; }
+  .panel-row .val { font-family: 'DM Mono', monospace; color: var(--text-dim); font-size: 12px; }
+
+  /* ── BAR CHART ── */
+  .bar-chart { padding: 18px; }
+  .bar-row { margin-bottom: 14px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: var(--text-dim); }
+  .bar-label span:last-child { font-family: 'DM Mono', monospace; }
+  .bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+  .bar-fill.analog { background: var(--accent-analog); }
+  .bar-fill.digital { background: var(--accent-digital); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    padding: 48px; text-align: center; color: var(--text-muted);
+    font-size: 13px;
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: .4; }
+
+  /* ── TOTALS BAR ── */
+  .totals-bar {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 24px;
+  }
+  .total-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .total-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-weight: 700; }
+  .total-val { font-size: 22px; font-weight: 800; font-family: 'DM Mono', monospace; }
+  .total-val.analog { color: var(--accent-analog); }
+  .total-val.digital { color: var(--accent-digital); }
+  .total-val.all { color: var(--green); }
+
+  .action-btn.pdf-btn { color: var(--accent-analog); border-color: rgba(244,161,52,0.3); }
+  .action-btn.pdf-btn:hover { background: var(--accent-analog-dim); border-color: var(--accent-analog); color: var(--accent-analog); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    nav { padding: 12px 16px 0; gap: 0; }
     main { padding: 16px; }
-    .header-right span, .btn-backup span { display: none; }
-    .modal-overlay { align-items: flex-end; }
-    .modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; }
+    header { padding: 0 16px; }
+    .tab { padding: 10px 14px; font-size: 12px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .totals-bar { grid-template-columns: 1fr; }
   }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>
 
-<div id="tela-login" style="display:flex;position:fixed;inset:0;z-index:9999;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:20px;">
-    <div style="font-size:32px;font-weight:800;letter-spacing:0.1em">LAB<span style="color:var(--accent-analog)">.</span>STUDIO</div>
-    <button onclick="fazerLogin()" style="padding:14px 28px;border-radius:10px;border:none;background:white;color:black;font-weight:700;cursor:pointer;font-family:'Syne'">Entrar com Google</button>
-    <div id="login-error" style="color:var(--red);font-size:13px"></div>
+<!-- ── TELA DE LOGIN ── -->
+<div id="tela-login" style="
+  display:flex; position:fixed; inset:0; z-index:9999;
+  background:var(--bg); align-items:center; justify-content:center;
+  flex-direction:column; gap:24px;
+">
+  <div style="text-align:center">
+    <div style="font-size:32px;font-weight:800;letter-spacing:0.1em;margin-bottom:6px">
+      LAB<span style="color:var(--accent-analog)">.</span>STUDIO
+    </div>
+    <div style="font-size:13px;color:var(--text-muted)">Sistema de Gestão</div>
+  </div>
+  <button onclick="fazerLogin()" style="
+    background:white; color:#333; border:none;
+    padding:12px 28px; border-radius:10px;
+    font-family:'Syne',sans-serif; font-weight:700; font-size:14px;
+    cursor:pointer; display:flex; align-items:center; gap:10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    transition: transform .15s;
+  " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <img src="https://www.google.com/favicon.ico" width="18" height="18">
+    Entrar com Google
+  </button>
+  <div id="login-error" style="font-size:12px;color:var(--red);min-height:18px"></div>
 </div>
 
+<!-- ── APP ROOT ── -->
 <div id="app-root" style="display:none">
-  <header>
-    <div class="logo">LAB<span>.</span>STUDIO</div>
-    <div class="header-right">
-      <span id="sync-status" style="font-size:11px;color:var(--text-muted);font-family:'DM Mono'">⏳...</span>
-      <button class="btn-backup" onclick="exportarBackup()"><span>Backup</span> ⬇️</button>
-      <label class="btn-backup">
-        <span>Importar</span> ⬆️ <input type="file" onchange="importarBackup(event)" style="display:none">
-      </label>
-      <button class="btn-add" onclick="openModal()">+ <span>Novo Trabalho</span></button>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    LAB<span>.</span>STUDIO
+  </div>
+  <div class="header-right">
+    <span id="sync-status" style="font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace">⏳ Conectando...</span>
+    <button id="btn-logout" onclick="window._signOut()" style="display:none;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 14px;border-radius:var(--radius);font-family:'Syne',sans-serif;font-weight:600;font-size:12px;cursor:pointer;align-items:center;gap:5px;transition:all .2s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">⎋ Sair</button>
+    <button class="btn-backup" onclick="exportarBackup()" title="Exportar backup">⬇ Backup</button>
+    <label class="btn-backup importar" title="Importar backup">
+      ⬆ Importar
+      <input type="file" accept=".json" onchange="importarBackup(event)" style="display:none">
+    </label>
+    <button class="btn-add" onclick="openModal()">
+      + Novo Trabalho
+    </button>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <div class="tab active" onclick="switchTab('dashboard')">
+    ◈ Dashboard
+  </div>
+  <div class="tab" onclick="switchTab('trabalhos')">
+    ⊞ Trabalhos
+    <span class="tab-badge" id="badge-trabalhos">0</span>
+  </div>
+  <div class="tab" onclick="switchTab('clientes')">
+    ◎ Clientes
+    <span class="tab-badge" id="badge-clientes">0</span>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- ── DASHBOARD ── -->
+  <div class="page active" id="page-dashboard">
+
+    <div class="stats-grid">
+      <div class="stat-card analog">
+        <div class="stat-label"><span class="stat-dot analog"></span>Analógico / Acrílico</div>
+        <div class="stat-value money" id="dash-analog">0,00</div>
+        <div class="stat-sub" id="dash-analog-count">0 trabalhos</div>
+      </div>
+      <div class="stat-card digital">
+        <div class="stat-label"><span class="stat-dot digital"></span>Digital</div>
+        <div class="stat-value money" id="dash-digital">0,00</div>
+        <div class="stat-sub" id="dash-digital-count">0 trabalhos</div>
+      </div>
+      <div class="stat-card total">
+        <div class="stat-label"><span class="stat-dot total"></span>Total Geral</div>
+        <div class="stat-value money" id="dash-total">0,00</div>
+        <div class="stat-sub" id="dash-total-count">0 trabalhos</div>
+      </div>
+      <div class="stat-card clients">
+        <div class="stat-label"><span class="stat-dot clients"></span>Clientes</div>
+        <div class="stat-value" id="dash-clients">0</div>
+        <div class="stat-sub" id="dash-clients-sub">cadastrados</div>
+      </div>
+      <div class="stat-card digital" style="border-top-color: #a78bfa">
+        <div class="stat-label"><span class="stat-dot" style="background:#a78bfa"></span>Elementos Digitais</div>
+        <div class="stat-value" id="dash-elementos" style="color:#a78bfa">0</div>
+        <div class="stat-sub" id="dash-elementos-sub">desenhados</div>
+      </div>
     </div>
-  </header>
 
-  <nav>
-    <div class="tab active" onclick="switchTab('dashboard')">◈ Dashboard</div>
-    <div class="tab" onclick="switchTab('trabalhos')">⊞ Trabalhos <span id="badge-trabalhos"></span></div>
-    <div class="tab" onclick="switchTab('clientes')">◎ Clientes <span id="badge-clientes"></span></div>
-    <div class="tab" onclick="switchTab('servicos')">🏷️ Catálogo / Preços</div>
-  </nav>
+    <div class="dual-col">
 
-  <main>
-    <!-- DASHBOARD -->
-    <div class="page active" id="page-dashboard">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">ANALÓGICO</div>
-                <div class="stat-value" id="dash-analog">R$ 0,00</div>
+      <div>
+        <div class="section-header" style="margin-bottom:12px">
+          <div class="section-title">Receita por Tipo</div>
+        </div>
+        <div class="panel">
+          <div class="bar-chart" id="bar-chart">
+            <div class="bar-row">
+              <div class="bar-label"><span>Analógico / Acrílico</span><span id="bc-analog">R$ 0,00</span></div>
+              <div class="bar-track"><div class="bar-fill analog" id="bf-analog" style="width:0%"></div></div>
             </div>
-            <div class="stat-card" style="border-top-color: var(--accent-digital)">
-                <div class="stat-label">DIGITAL</div>
-                <div class="stat-value" id="dash-digital">R$ 0,00</div>
+            <div class="bar-row" style="margin:0">
+              <div class="bar-label"><span>Digital</span><span id="bc-digital">R$ 0,00</span></div>
+              <div class="bar-track"><div class="bar-fill digital" id="bf-digital" style="width:0%"></div></div>
             </div>
-            <div class="stat-card" style="border-top-color: var(--green)">
-                <div class="stat-label">TOTAL GERAL</div>
-                <div class="stat-value" id="dash-total">R$ 0,00</div>
-            </div>
+          </div>
         </div>
-        <h3 style="margin-bottom:15px; font-size:16px">Trabalhos Recentes</h3>
-        <div id="recent-list"></div>
+      </div>
+
+      <div>
+        <div class="section-header" style="margin-bottom:12px">
+          <div class="section-title">Trabalhos por Status</div>
+        </div>
+        <div class="panel" id="status-panel">
+          <div class="panel-row">
+            <span>Pendente</span><span class="val" id="st-pendente">0</span>
+          </div>
+          <div class="panel-row">
+            <span>Em Andamento</span><span class="val" id="st-andamento">0</span>
+          </div>
+          <div class="panel-row">
+            <span>Concluído</span><span class="val" id="st-concluido">0</span>
+          </div>
+          <div class="panel-row">
+            <span>Cancelado</span><span class="val" id="st-cancelado">0</span>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- TRABALHOS -->
-    <div class="page" id="page-trabalhos">
-        <input type="text" id="search-trabalhos" placeholder="Buscar..." oninput="renderTrabalhos()" style="max-width:400px; margin-bottom:20px">
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Cliente</th><th>Trabalho</th><th>Valor</th><th>Ações</th></tr></thead>
-                <tbody id="tbody-trabalhos"></tbody>
-            </table>
-        </div>
+    <div style="margin-top: 20px">
+      <div class="section-header" style="margin-bottom:12px">
+        <div class="section-title">Recentes</div>
+      </div>
+      <div class="panel" id="recent-panel">
+        <div class="empty"><div class="empty-icon">📋</div>Nenhum trabalho ainda</div>
+      </div>
     </div>
 
-    <!-- CLIENTES -->
-    <div class="page" id="page-clientes">
-        <button class="btn-add" onclick="openClienteModal()" style="margin-bottom:20px">+ Novo Cliente</button>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Nome</th><th>Contato</th><th>Ações</th></tr></thead>
-                <tbody id="tbody-clientes"></tbody>
-            </table>
-        </div>
+  </div>
+
+  <!-- ── TRABALHOS ── -->
+  <div class="page" id="page-trabalhos">
+
+    <div class="totals-bar">
+      <div class="total-item">
+        <div class="total-label">⬡ Analógico / Acrílico</div>
+        <div class="total-val analog" id="t-analog">R$ 0,00</div>
+      </div>
+      <div class="total-item">
+        <div class="total-label">◈ Digital</div>
+        <div class="total-val digital" id="t-digital">R$ 0,00</div>
+      </div>
+      <div class="total-item">
+        <div class="total-label">∑ Total</div>
+        <div class="total-val all" id="t-total">R$ 0,00</div>
+      </div>
     </div>
 
-    <!-- CATALOGO -->
-    <div class="page" id="page-servicos">
-        <div style="background:var(--surface); padding:24px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:24px">
-            <h4 style="margin-bottom:15px">Novo Item no Catálogo</h4>
-            <div class="stats-grid" style="border:none; padding:0; margin:0">
-                <div class="form-group"><label>Serviço</label><input type="text" id="s-nome"></div>
-                <div class="form-group"><label>Preço</label><input type="number" id="s-preco" step="0.01"></div>
-                <div class="form-group">
-                    <label>Tipo</label>
-                    <select id="s-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
-                </div>
-            </div>
-            <button class="btn-save" onclick="saveServico()">Cadastrar no Catálogo</button>
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Serviço</th><th>Preço</th><th>Ações</th></tr></thead>
-                <tbody id="tbody-servicos"></tbody>
-            </table>
-        </div>
+    <div class="filters">
+      <input class="search-input" type="text" placeholder="Buscar trabalho ou cliente..." id="search-trabalhos" oninput="renderTrabalhos()">
+      <button class="filter-btn active" onclick="setFilter('todos')" id="f-todos">Todos</button>
+      <button class="filter-btn" onclick="setFilter('analog')" id="f-analog">Analógico</button>
+      <button class="filter-btn" onclick="setFilter('digital')" id="f-digital">Digital</button>
+      <button class="filter-btn" onclick="setFilter('pendente')" id="f-pendente">Pendente</button>
+      <button class="filter-btn" onclick="setFilter('andamento')" id="f-andamento">Andamento</button>
+      <button class="filter-btn" onclick="setFilter('concluido')" id="f-concluido">Concluído</button>
     </div>
-  </main>
 
-  <!-- MODAL TRABALHO -->
-  <div class="modal-overlay" id="modal-trabalho">
-    <div class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-            <h3 id="modal-title">Novo Trabalho</h3>
-            <button onclick="closeModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px">✕</button>
-        </div>
-        <input type="hidden" id="edit-id">
-        <div class="form-group">
-            <label>Catálogo de Preços (Opcional)</label>
-            <select id="f-catalogo" onchange="applyCatalogo()"><option value="">— Selecionar —</option></select>
-        </div>
-        <div class="form-group"><label>Nome do Trabalho</label><input type="text" id="f-nome"></div>
-        <div class="form-group"><label>Cliente</label><select id="f-cliente"></select></div>
-        <div class="form-group"><label>Valor (R$)</label><input type="number" id="f-valor" step="0.01"></div>
-        <div class="form-group">
-            <label>Tipo</label>
-            <select id="f-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
-        </div>
-        <button class="btn-save" onclick="saveTrabalho()">Salvar Trabalho</button>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Trabalho</th>
+            <th>Tipo</th>
+            <th>Status</th>
+            <th>Valor</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-trabalhos">
+          <tr><td colspan="8"><div class="empty"><div class="empty-icon">🖌️</div>Nenhum trabalho cadastrado</div></td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- MODAL CLIENTE -->
-  <div class="modal-overlay" id="modal-cliente">
-    <div class="modal">
-        <h3>Novo Cliente</h3>
-        <div class="form-group" style="margin-top:15px"><label>Nome</label><input type="text" id="c-nome"></div>
-        <div class="form-group"><label>Contato</label><input type="text" id="c-contato"></div>
-        <button class="btn-save" onclick="saveCliente()">Salvar Cliente</button>
-        <button onclick="closeClienteModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:10px; cursor:pointer">Cancelar</button>
+  <!-- ── CLIENTES ── -->
+  <div class="page" id="page-clientes">
+
+    <div class="filters">
+      <input class="search-input" type="text" placeholder="Buscar cliente..." id="search-clientes" oninput="renderClientes()">
+      <button class="btn-add" onclick="openClienteModal()" style="margin-left: auto;">+ Novo Cliente</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Contato</th>
+            <th>Total Gasto</th>
+            <th>Trabalhos</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-clientes">
+          <tr><td colspan="6"><div class="empty"><div class="empty-icon">👤</div>Nenhum cliente cadastrado</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── MODAL TRABALHO ── -->
+<div class="modal-overlay" id="modal-trabalho">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">
+      <span id="modal-title-text">🖌️ Novo Trabalho</span>
+    </div>
+    <input type="hidden" id="edit-id">
+    <div class="form-grid">
+
+      <div class="form-group full">
+        <label>Tipo de Trabalho</label>
+        <div class="type-toggle">
+          <div class="type-option selected analog" onclick="selectType('analog')" id="opt-analog">⬡ Analógico / Acrílico</div>
+          <div class="type-option" onclick="selectType('digital')" id="opt-digital">◈ Digital</div>
+        </div>
+        <input type="hidden" id="f-tipo" value="analog">
+      </div>
+
+      <div class="form-group">
+        <label>Cliente</label>
+        <select id="f-cliente">
+          <option value="">— Selecionar —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Nome do Paciente</label>
+        <input type="text" id="f-paciente" placeholder="Ex: Maria Silva">
+      </div>
+
+      <div class="form-group full">
+        <label>Trabalho</label>
+        <input type="text" id="f-nome" placeholder="Ex: Retrato A4 acrílico, Logo digital...">
+      </div>
+
+      <!-- Campos exclusivos digital -->
+      <div class="form-group" id="grupo-elementos" style="display:none">
+        <label>Qtd. de Elementos</label>
+        <input type="number" id="f-elementos" placeholder="0" min="0" step="1" oninput="calcValorDigital()">
+      </div>
+
+      <div class="form-group" id="grupo-valor-elemento" style="display:none">
+        <label>Valor por Elemento (R$)</label>
+        <input type="number" id="f-valor-elemento" placeholder="0,00" step="0.01" min="0" oninput="calcValorDigital()">
+      </div>
+
+      <div class="form-group" id="grupo-valor-label">
+        <label>Valor Total (R$)</label>
+        <input type="number" id="f-valor" placeholder="0,00" step="0.01" min="0">
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="pendente">Pendente</option>
+          <option value="andamento">Em Andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="f-data">
+      </div>
+
+      <div class="form-group full">
+        <label>Descrição / Observações</label>
+        <textarea id="f-desc" placeholder="Dimensões, referências, detalhes do pedido..."></textarea>
+      </div>
+
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveTrabalho()">Salvar</button>
     </div>
   </div>
 </div>
+
+<!-- ── MODAL CLIENTE ── -->
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal">
+    <button class="modal-close" onclick="closeClienteModal()">✕</button>
+    <div class="modal-title">👤 Novo Cliente</div>
+    <input type="hidden" id="ce-id">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nome Completo</label>
+        <input type="text" id="ce-nome" placeholder="Nome do cliente">
+      </div>
+      <div class="form-group">
+        <label>Contato (tel / email)</label>
+        <input type="text" id="ce-contato" placeholder="(00) 00000-0000">
+      </div>
+      <div class="form-group">
+        <label>Instagram / Rede Social</label>
+        <input type="text" id="ce-social" placeholder="@usuario">
+      </div>
+      <div class="form-group full">
+        <label>Observações</label>
+        <textarea id="ce-obs" placeholder="Preferências, detalhes importantes..."></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeClienteModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveCliente()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- fim #app-root -->
 
 <script>
-window.trabalhos = []; window.clientes = []; window.servicos = [];
+// ─── DATA ───────────────────────────────────────────
+// Arrays em memória — populados pelo listener Firebase em tempo real
+window.trabalhos = window.trabalhos || [];
+window.clientes  = window.clientes  || [];
+let filterAtivo = 'todos';
 
-const fmt = (n) => Number(n).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
 
+async function saveTrabalhoFB(obj) {
+  try {
+    await window._setDoc(window._userDoc('trabalhos', obj.id), obj);
+  } catch(e) { console.error('Erro ao salvar trabalho:', e); alert('Erro ao salvar. Verifique a conexão.'); }
+}
+
+async function saveClienteFB(obj) {
+  try {
+    await window._setDoc(window._userDoc('clientes', obj.id), obj);
+  } catch(e) { console.error('Erro ao salvar cliente:', e); alert('Erro ao salvar. Verifique a conexão.'); }
+}
+
+async function deleteTrabalhoFB(id) {
+  try {
+    await window._deleteDoc(window._userDoc('trabalhos', id));
+  } catch(e) { console.error('Erro ao deletar:', e); }
+}
+
+async function deleteClienteFB(id) {
+  try {
+    await window._deleteDoc(window._userDoc('clientes', id));
+  } catch(e) { console.error('Erro ao deletar:', e); }
+}
+
+// ─── TABS ────────────────────────────────────────────
 function switchTab(tab) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('page-' + tab).classList.add('active');
-    event.currentTarget.classList.add('active');
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const pages = ['dashboard','trabalhos','clientes'];
+    t.classList.toggle('active', pages[i] === tab);
+  });
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.toggle('active', p.id === 'page-' + tab);
+  });
+  if (tab === 'trabalhos') renderTrabalhos();
+  if (tab === 'clientes')  renderClientes();
+  if (tab === 'dashboard') renderDashboard();
 }
 
-// CATALOGO
-async function saveServico() {
-    const nome = document.getElementById('s-nome').value;
-    const preco = parseFloat(document.getElementById('s-preco').value) || 0;
-    const tipo = document.getElementById('s-tipo').value;
-    if(!nome) return alert('Nome necessário');
-    const id = Date.now().toString();
-    await window._setDoc(window._userDoc('servicos', id), {id, nome, preco, tipo});
-    document.getElementById('s-nome').value = ''; document.getElementById('s-preco').value = '';
+// ─── FILTER ──────────────────────────────────────────
+function setFilter(f) {
+  filterAtivo = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','digital'));
+  const btn = document.getElementById('f-' + f);
+  btn.classList.add('active');
+  if (f === 'digital') btn.classList.add('digital');
+  renderTrabalhos();
 }
 
-function renderServicos() {
-    const tbody = document.getElementById('tbody-servicos');
-    tbody.innerHTML = window.servicos.map(s => `
-        <tr>
-            <td>${s.nome} <br> <small style="color:var(--text-muted)">${s.tipo}</small></td>
-            <td>R$ ${fmt(s.preco)}</td>
-            <td><button class="action-btn" onclick="deleteServico('${s.id}')">✕</button></td>
-        </tr>
-    `).join('');
-    const fCat = document.getElementById('f-catalogo');
-    fCat.innerHTML = '<option value="">— Selecionar —</option>' + window.servicos.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+// ─── MODAL TRABALHO ───────────────────────────────────
+function openModal(id) {
+  editingTrabalhoId = id || null;
+  const m = document.getElementById('modal-trabalho');
+  m.classList.add('open');
+
+  // populate cliente dropdown
+  const sel = document.getElementById('f-cliente');
+  sel.innerHTML = '<option value="">— Selecionar —</option>';
+  clientes.forEach(c => {
+    sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+  });
+
+  // default date
+  if (!id) {
+    document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modal-title-text').textContent = '🖌️ Novo Trabalho';
+    document.getElementById('edit-id').value = '';
+    selectType('analog');
+    document.getElementById('f-nome').value = '';
+    document.getElementById('f-paciente').value = '';
+    document.getElementById('f-valor').value = '';
+    document.getElementById('f-elementos').value = '';
+    document.getElementById('f-valor-elemento').value = '';
+    document.getElementById('f-status').value = 'pendente';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-cliente').value = '';
+  } else {
+    const t = trabalhos.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('modal-title-text').textContent = '✏️ Editar Trabalho';
+    document.getElementById('edit-id').value = t.id;
+    selectType(t.tipo);
+    document.getElementById('f-nome').value = t.nome;
+    document.getElementById('f-paciente').value = t.paciente || '';
+    document.getElementById('f-valor').value = t.valor;
+    document.getElementById('f-elementos').value = t.elementos || '';
+    document.getElementById('f-valor-elemento').value = t.valorElemento || '';
+    document.getElementById('f-status').value = t.status;
+    document.getElementById('f-data').value = t.data;
+    document.getElementById('f-desc').value = t.desc || '';
+    document.getElementById('f-cliente').value = t.clienteId || '';
+  }
 }
 
-async function deleteServico(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('servicos', id)); }
-
-function applyCatalogo() {
-    const sId = document.getElementById('f-catalogo').value;
-    const s = window.servicos.find(x => x.id === sId);
-    if(s) {
-        document.getElementById('f-nome').value = s.nome;
-        document.getElementById('f-valor').value = s.preco;
-        document.getElementById('f-tipo').value = s.tipo;
-    }
+function closeModal() {
+  document.getElementById('modal-trabalho').classList.remove('open');
 }
 
-// CLIENTES
-function openClienteModal() { document.getElementById('modal-cliente').classList.add('open'); }
-function closeClienteModal() { document.getElementById('modal-cliente').classList.remove('open'); }
-async function saveCliente() {
-    const nome = document.getElementById('c-nome').value;
-    if(!nome) return;
-    const id = Date.now().toString();
-    await window._setDoc(window._userDoc('clientes', id), {id, nome, contato: document.getElementById('c-contato').value});
-    closeClienteModal();
-}
-function renderClientes() {
-    const tbody = document.getElementById('tbody-clientes');
-    tbody.innerHTML = window.clientes.map(c => `
-        <tr>
-            <td>${c.nome}</td>
-            <td>${c.contato || '-'}</td>
-            <td>
-                <button class="action-btn pdf" onclick="exportPDF('${c.id}')">PDF</button>
-                <button class="action-btn" onclick="deleteCliente('${c.id}')">✕</button>
-            </td>
-        </tr>
-    `).join('');
-}
-async function deleteCliente(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('clientes', id)); }
+function selectType(tipo) {
+  document.getElementById('f-tipo').value = tipo;
+  const a = document.getElementById('opt-analog');
+  const d = document.getElementById('opt-digital');
+  a.className = 'type-option' + (tipo === 'analog' ? ' selected analog' : '');
+  d.className = 'type-option' + (tipo === 'digital' ? ' selected digital' : '');
 
-// TRABALHOS
-function openModal(id = null) {
-    document.getElementById('modal-trabalho').classList.add('open');
-    const cliSel = document.getElementById('f-cliente');
-    cliSel.innerHTML = window.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-    if(!id) {
-        document.getElementById('edit-id').value = ''; document.getElementById('f-nome').value = ''; document.getElementById('f-valor').value = '';
-    }
+  const isDigital = tipo === 'digital';
+  document.getElementById('grupo-elementos').style.display       = isDigital ? '' : 'none';
+  document.getElementById('grupo-valor-elemento').style.display  = isDigital ? '' : 'none';
+
+  if (!isDigital) {
+    document.getElementById('f-elementos').value = '';
+    document.getElementById('f-valor-elemento').value = '';
+  }
 }
-function closeModal() { document.getElementById('modal-trabalho').classList.remove('open'); }
+
+function calcValorDigital() {
+  const qtd = parseFloat(document.getElementById('f-elementos').value) || 0;
+  const vpe  = parseFloat(document.getElementById('f-valor-elemento').value) || 0;
+  if (qtd > 0 && vpe > 0) {
+    document.getElementById('f-valor').value = (qtd * vpe).toFixed(2);
+  }
+}
+
 async function saveTrabalho() {
-    const id = document.getElementById('edit-id').value || Date.now().toString();
-    await window._setDoc(window._userDoc('trabalhos', id), {
-        id, nome: document.getElementById('f-nome').value,
-        clienteId: document.getElementById('f-cliente').value,
-        valor: parseFloat(document.getElementById('f-valor').value) || 0,
-        tipo: document.getElementById('f-tipo').value,
-        criadoEm: Date.now()
-    });
-    closeModal();
+  const nome     = document.getElementById('f-nome').value.trim();
+  const paciente = document.getElementById('f-paciente').value.trim();
+  const valor    = parseFloat(document.getElementById('f-valor').value) || 0;
+  const tipo     = document.getElementById('f-tipo').value;
+  const status   = document.getElementById('f-status').value;
+  const data     = document.getElementById('f-data').value;
+  const desc     = document.getElementById('f-desc').value.trim();
+  const clienteId = document.getElementById('f-cliente').value;
+  const editId   = document.getElementById('edit-id').value;
+  const elementos     = tipo === 'digital' ? (parseInt(document.getElementById('f-elementos').value) || 0) : 0;
+  const valorElemento = tipo === 'digital' ? (parseFloat(document.getElementById('f-valor-elemento').value) || 0) : 0;
+
+  if (!nome) { alert('Informe o trabalho.'); return; }
+
+  if (editId) {
+    const existing = trabalhos.find(x => x.id === editId);
+    const updated = { ...(existing||{}), id: editId, nome, paciente, valor, tipo, status, data, desc, clienteId, elementos, valorElemento };
+    await saveTrabalhoFB(updated);
+  } else {
+    const novo = { id: uid(), nome, paciente, valor, tipo, status, data, desc, clienteId, elementos, valorElemento, criadoEm: Date.now() };
+    await saveTrabalhoFB(novo);
+  }
+
+  closeModal();
+  // render é disparado pelo listener onSnapshot automaticamente
 }
+
+async function deleteTrabalho(id) {
+  if (!confirm('Remover este trabalho?')) return;
+  await deleteTrabalhoFB(id);
+}
+
+// ─── MODAL CLIENTE ───────────────────────────────────
+function openClienteModal(id) {
+  const m = document.getElementById('modal-cliente');
+  m.classList.add('open');
+  if (!id) {
+    document.getElementById('ce-id').value = '';
+    document.getElementById('ce-nome').value = '';
+    document.getElementById('ce-contato').value = '';
+    document.getElementById('ce-social').value = '';
+    document.getElementById('ce-obs').value = '';
+  } else {
+    const c = clientes.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('ce-id').value = c.id;
+    document.getElementById('ce-nome').value = c.nome;
+    document.getElementById('ce-contato').value = c.contato || '';
+    document.getElementById('ce-social').value = c.social || '';
+    document.getElementById('ce-obs').value = c.obs || '';
+  }
+}
+
+function closeClienteModal() {
+  document.getElementById('modal-cliente').classList.remove('open');
+}
+
+async function saveCliente() {
+  const nome    = document.getElementById('ce-nome').value.trim();
+  const contato = document.getElementById('ce-contato').value.trim();
+  const social  = document.getElementById('ce-social').value.trim();
+  const obs     = document.getElementById('ce-obs').value.trim();
+  const editId  = document.getElementById('ce-id').value;
+
+  if (!nome) { alert('Informe o nome do cliente.'); return; }
+
+  if (editId) {
+    const existing = clientes.find(x => x.id === editId);
+    await saveClienteFB({ ...(existing||{}), id: editId, nome, contato, social, obs });
+  } else {
+    await saveClienteFB({ id: uid(), nome, contato, social, obs });
+  }
+
+  closeClienteModal();
+  // render disparado pelo onSnapshot
+}
+
+async function deleteCliente(id) {
+  if (!confirm('Remover este cliente? Os trabalhos associados continuarão existindo.')) return;
+  await deleteClienteFB(id);
+}
+
+// ─── RENDER TRABALHOS ────────────────────────────────
 function renderTrabalhos() {
-    const busca = document.getElementById('search-trabalhos').value.toLowerCase();
-    const tbody = document.getElementById('tbody-trabalhos');
-    tbody.innerHTML = window.trabalhos.filter(t => t.nome.toLowerCase().includes(busca)).map(t => {
-        const c = window.clientes.find(x => x.id === t.clienteId);
-        return `<tr>
-            <td>${c ? c.nome : '?'}</td>
-            <td>${t.nome} <br> <small style="color:var(--text-muted)">${t.tipo}</small></td>
-            <td>R$ ${fmt(t.valor)}</td>
-            <td><button class="action-btn" onclick="deleteTrabalho('${t.id}')">✕</button></td>
-        </tr>`;
-    }).join('');
-}
-async function deleteTrabalho(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('trabalhos', id)); }
+  const q   = (document.getElementById('search-trabalhos').value || '').toLowerCase();
+  const tbody = document.getElementById('tbody-trabalhos');
 
-// DASHBOARD
+  let list = trabalhos.filter(t => {
+    const c = clientes.find(x => x.id === t.clienteId);
+    const cNome = c ? c.nome.toLowerCase() : '';
+    const matchQ = !q || t.nome.toLowerCase().includes(q) || cNome.includes(q);
+    let matchF = true;
+    if (filterAtivo === 'analog') matchF = t.tipo === 'analog';
+    else if (filterAtivo === 'digital') matchF = t.tipo === 'digital';
+    else if (filterAtivo === 'pendente') matchF = t.status === 'pendente';
+    else if (filterAtivo === 'andamento') matchF = t.status === 'andamento';
+    else if (filterAtivo === 'concluido') matchF = t.status === 'concluido';
+    return matchQ && matchF;
+  });
+
+  // totals for filtered
+  const tAnalog  = list.filter(t=>t.tipo==='analog').reduce((s,t)=>s+t.valor,0);
+  const tDigital = list.filter(t=>t.tipo==='digital').reduce((s,t)=>s+t.valor,0);
+  document.getElementById('t-analog').textContent  = 'R$ ' + fmt(tAnalog);
+  document.getElementById('t-digital').textContent = 'R$ ' + fmt(tDigital);
+  document.getElementById('t-total').textContent   = 'R$ ' + fmt(tAnalog + tDigital);
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-icon">🖌️</div>Nenhum trabalho encontrado</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((t,i) => {
+    const c = clientes.find(x => x.id === t.clienteId);
+    const elemInfo = t.tipo === 'digital' && t.elementos ? `<br><span style="font-size:11px;color:var(--accent-digital)">${t.elementos} elem.</span>` : '';
+    return `<tr>
+      <td><span class="client-id">#${String(list.length - i).padStart(3,'0')}</span></td>
+      <td><span class="client-name">${c ? c.nome : '<span style="color:var(--text-muted)">—</span>'}</span></td>
+      <td>
+        ${t.nome}
+        ${t.paciente ? `<br><span style="font-size:11px;color:var(--text-muted)">Paciente: ${t.paciente}</span>` : ''}
+      </td>
+      <td><span class="type-badge ${t.tipo}"><span class="dot"></span>${t.tipo==='analog'?'Analógico':'Digital'}</span>${elemInfo}</td>
+      <td><span class="status-badge ${t.status}">${statusLabel(t.status)}</span></td>
+      <td><span class="money-cell">${fmt(t.valor)}</span></td>
+      <td style="font-size:12px;color:var(--text-muted)">${formatDate(t.data)}</td>
+      <td>
+        <button class="action-btn" onclick="openModal('${t.id}')">✎</button>
+        <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── RENDER CLIENTES ─────────────────────────────────
+function renderClientes() {
+  const q = (document.getElementById('search-clientes').value || '').toLowerCase();
+  const tbody = document.getElementById('tbody-clientes');
+
+  let list = clientes.filter(c => !q || c.nome.toLowerCase().includes(q) || (c.contato||'').toLowerCase().includes(q));
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">👤</div>Nenhum cliente cadastrado</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((c,i) => {
+    const works = trabalhos.filter(t => t.clienteId === c.id);
+    const total = works.reduce((s,t) => s+t.valor, 0);
+    return `<tr>
+      <td><span class="client-id">#${String(i+1).padStart(3,'0')}</span></td>
+      <td><span class="client-name">${c.nome}</span>${c.social ? `<br><span style="font-size:11px;color:var(--accent-digital)">${c.social}</span>` : ''}</td>
+      <td style="font-size:13px;color:var(--text-dim)">${c.contato || '—'}</td>
+      <td><span class="money-cell">${fmt(total)}</span></td>
+      <td><span style="font-size:13px">${works.length} trabalho${works.length!==1?'s':''}</span></td>
+      <td>
+        <button class="action-btn pdf-btn" onclick="exportClientePDF('${c.id}')" title="Exportar PDF">⬇ PDF</button>
+        <button class="action-btn" onclick="openClienteModal('${c.id}')">✎</button>
+        <button class="action-btn del" onclick="deleteCliente('${c.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── RENDER DASHBOARD ────────────────────────────────
 function renderDashboard() {
-    const totA = window.trabalhos.filter(t => t.tipo === 'analog').reduce((a, b) => a + b.valor, 0);
-    const totD = window.trabalhos.filter(t => t.tipo === 'digital').reduce((a, b) => a + b.valor, 0);
-    document.getElementById('dash-analog').textContent = 'R$ ' + fmt(totA);
-    document.getElementById('dash-digital').textContent = 'R$ ' + fmt(totD);
-    document.getElementById('dash-total').textContent = 'R$ ' + fmt(totA + totD);
-    const recentes = window.trabalhos.slice(0, 5);
-    document.getElementById('recent-list').innerHTML = recentes.map(t => `
-        <div style="background:var(--surface); padding:15px; border-radius:10px; margin-bottom:10px; border:1px solid var(--border); display:flex; justify-content:space-between">
-            <span>${t.nome}</span> <b>R$ ${fmt(t.valor)}</b>
+  const analog  = trabalhos.filter(t=>t.tipo==='analog');
+  const digital = trabalhos.filter(t=>t.tipo==='digital');
+  const totA = analog.reduce((s,t)=>s+t.valor,0);
+  const totD = digital.reduce((s,t)=>s+t.valor,0);
+  const totG = totA + totD;
+
+  document.getElementById('dash-analog').textContent       = fmt(totA);
+  document.getElementById('dash-analog-count').textContent = analog.length + ' trabalhos';
+  document.getElementById('dash-digital').textContent       = fmt(totD);
+  document.getElementById('dash-digital-count').textContent = digital.length + ' trabalhos';
+  document.getElementById('dash-total').textContent         = fmt(totG);
+  document.getElementById('dash-total-count').textContent   = trabalhos.length + ' trabalhos';
+  document.getElementById('dash-clients').textContent       = clientes.length;
+  document.getElementById('dash-clients-sub').textContent   = clientes.length === 1 ? 'cadastrado' : 'cadastrados';
+
+  // elementos digitais
+  const totalElementos = trabalhos.filter(t=>t.tipo==='digital').reduce((s,t)=>s+(t.elementos||0),0);
+  document.getElementById('dash-elementos').textContent     = totalElementos;
+  document.getElementById('dash-elementos-sub').textContent = totalElementos === 1 ? 'desenhado' : 'desenhados';
+
+  // bar chart
+  const mx = Math.max(totA, totD) || 1;
+  document.getElementById('bc-analog').textContent = 'R$ ' + fmt(totA);
+  document.getElementById('bc-digital').textContent = 'R$ ' + fmt(totD);
+  document.getElementById('bf-analog').style.width  = (totA/mx*100) + '%';
+  document.getElementById('bf-digital').style.width = (totD/mx*100) + '%';
+
+  // status counts
+  ['pendente','andamento','concluido','cancelado'].forEach(s => {
+    document.getElementById('st-'+s).textContent = trabalhos.filter(t=>t.status===s).length;
+  });
+
+  // recentes
+  const recent = [...trabalhos].sort((a,b)=>b.criadoEm-a.criadoEm).slice(0,6);
+  const rPanel = document.getElementById('recent-panel');
+  if (!recent.length) {
+    rPanel.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhum trabalho ainda</div>';
+  } else {
+    rPanel.innerHTML = recent.map(t => {
+      const c = clientes.find(x=>x.id===t.clienteId);
+      return `<div class="panel-row">
+        <div>
+          <span class="name">${t.nome}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:8px">${c?c.nome:''}</span>
         </div>
-    `).join('');
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 8px">
+            ${t.tipo==='analog'?'Analógico':'Digital'}
+          </span>
+          <span class="val">R$ ${fmt(t.valor)}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
+// ─── BADGES ──────────────────────────────────────────
 function updateBadges() {
-    document.getElementById('badge-trabalhos').textContent = `(${window.trabalhos.length})`;
-    document.getElementById('badge-clientes').textContent = `(${window.clientes.length})`;
+  document.getElementById('badge-trabalhos').textContent = trabalhos.length;
+  document.getElementById('badge-clientes').textContent  = clientes.length;
 }
 
-// PDF EXPORT
-function exportPDF(clienteId) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const cli = window.clientes.find(c => c.id === clienteId);
-    const works = window.trabalhos.filter(t => t.clienteId === clienteId);
-    
-    doc.setFontSize(18); doc.text("Relatório de Cliente - LAB.STUDIO", 14, 20);
-    doc.setFontSize(12); doc.text(`Cliente: ${cli.nome}`, 14, 30);
-    doc.text(`Contato: ${cli.contato || '-'}`, 14, 35);
-    
-    const rows = works.map(t => [t.nome, t.tipo, `R$ ${fmt(t.valor)}`]);
-    doc.autoTable({ startY: 45, head: [['Trabalho', 'Tipo', 'Valor']], body: rows });
-    
-    const total = works.reduce((a, b) => a + b.valor, 0);
-    doc.text(`Total Acumulado: R$ ${fmt(total)}`, 14, doc.lastAutoTable.finalY + 10);
-    doc.save(`Relatorio_${cli.nome}.pdf`);
+// ─── HELPERS ─────────────────────────────────────────
+function fmt(n) {
+  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function statusLabel(s) {
+  return { pendente: 'Pendente', andamento: 'Andamento', concluido: 'Concluído', cancelado: 'Cancelado' }[s] || s;
 }
 
-// BACKUP
+// close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) { closeModal(); closeClienteModal(); } });
+});
+
+// ─── EXPORT PDF ──────────────────────────────────────
+function exportClientePDF(clienteId) {
+  const { jsPDF } = window.jspdf;
+  const c = clientes.find(x => x.id === clienteId);
+  if (!c) return;
+
+  const works = trabalhos.filter(t => t.clienteId === clienteId);
+  const totAnalog  = works.filter(t=>t.tipo==='analog').reduce((s,t)=>s+t.valor,0);
+  const totDigital = works.filter(t=>t.tipo==='digital').reduce((s,t)=>s+t.valor,0);
+  const totGeral   = totAnalog + totDigital;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210; // A4 width mm
+  const margin = 18;
+
+  // ── Background header band ──
+  doc.setFillColor(14, 14, 16);
+  doc.rect(0, 0, W, 42, 'F');
+
+  // ── Logo / title ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(244, 161, 52);
+  doc.text('LAB.STUDIO', margin, 16);
+
+  doc.setFontSize(9);
+  doc.setTextColor(152, 152, 176);
+  doc.text('Relatório de Cliente', margin, 23);
+
+  // date top right
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  doc.setFontSize(8);
+  doc.setTextColor(107, 107, 128);
+  doc.text('Emitido em ' + hoje, W - margin, 16, { align: 'right' });
+
+  // ── Client name ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(232, 232, 240);
+  doc.text(c.nome, margin, 34);
+
+  // ── Sub info ──
+  let infoY = 50;
+  doc.setDrawColor(42, 42, 53);
+  doc.setLineWidth(0.3);
+
+  // Info block
+  doc.setFillColor(23, 23, 27);
+  doc.roundedRect(margin, infoY - 6, W - margin*2, 28, 3, 3, 'FD');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(107, 107, 128);
+  doc.text('CONTATO', margin + 6, infoY);
+  doc.text('INSTAGRAM / REDE SOCIAL', margin + 70, infoY);
+  doc.text('TOTAL DE TRABALHOS', margin + 140, infoY);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(232, 232, 240);
+  doc.text(c.contato || '—', margin + 6, infoY + 8);
+  doc.text(c.social || '—', margin + 70, infoY + 8);
+  doc.text(String(works.length), margin + 140, infoY + 8);
+
+  if (c.obs) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(152, 152, 176);
+    doc.text('Obs: ' + c.obs, margin + 6, infoY + 17);
+  }
+
+  infoY += 36;
+
+  // ── Totals row ──
+  const boxW = (W - margin*2 - 8) / 3;
+
+  // Analógico box
+  doc.setFillColor(30, 24, 14);
+  doc.roundedRect(margin, infoY, boxW, 22, 2, 2, 'F');
+  doc.setDrawColor(244, 161, 52);
+  doc.setLineWidth(0.4);
+  doc.line(margin, infoY, margin + boxW, infoY);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7); doc.setTextColor(244, 161, 52);
+  doc.text('ANALÓGICO / ACRÍLICO', margin + 4, infoY + 6);
+  doc.setFontSize(11); doc.setTextColor(244, 161, 52);
+  doc.text('R$ ' + fmt(totAnalog), margin + 4, infoY + 15);
+
+  // Digital box
+  const dx = margin + boxW + 4;
+  doc.setFillColor(14, 18, 28);
+  doc.roundedRect(dx, infoY, boxW, 22, 2, 2, 'F');
+  doc.setDrawColor(59, 158, 255);
+  doc.line(dx, infoY, dx + boxW, infoY);
+  doc.setFontSize(7); doc.setTextColor(59, 158, 255);
+  doc.text('DIGITAL', dx + 4, infoY + 6);
+  doc.setFontSize(11); doc.setTextColor(59, 158, 255);
+  doc.text('R$ ' + fmt(totDigital), dx + 4, infoY + 15);
+
+  // Total box
+  const tx = dx + boxW + 4;
+  doc.setFillColor(14, 22, 16);
+  doc.roundedRect(tx, infoY, boxW, 22, 2, 2, 'F');
+  doc.setDrawColor(74, 222, 128);
+  doc.line(tx, infoY, tx + boxW, infoY);
+  doc.setFontSize(7); doc.setTextColor(74, 222, 128);
+  doc.text('TOTAL GERAL', tx + 4, infoY + 6);
+  doc.setFontSize(11); doc.setTextColor(74, 222, 128);
+  doc.text('R$ ' + fmt(totGeral), tx + 4, infoY + 15);
+
+  infoY += 30;
+
+  // ── Works table ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(152, 152, 176);
+  doc.text('TRABALHOS', margin, infoY);
+  infoY += 4;
+
+  if (!works.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(107, 107, 128);
+    doc.text('Nenhum trabalho registrado.', margin, infoY + 8);
+  } else {
+    doc.autoTable({
+      startY: infoY,
+      margin: { left: margin, right: margin },
+      head: [['#', 'Trabalho', 'Tipo', 'Status', 'Valor', 'Data']],
+      body: works.map((t, i) => [
+        String(i + 1).padStart(3, '0'),
+        t.nome,
+        t.tipo === 'analog' ? 'Analógico' : 'Digital',
+        statusLabel(t.status),
+        'R$ ' + fmt(t.valor),
+        formatDate(t.data)
+      ]),
+      styles: {
+        font: 'helvetica',
+        fontSize: 8.5,
+        cellPadding: 4,
+        textColor: [232, 232, 240],
+        fillColor: [23, 23, 27],
+        lineColor: [42, 42, 53],
+        lineWidth: 0.2
+      },
+      headStyles: {
+        fillColor: [30, 30, 36],
+        textColor: [107, 107, 128],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      alternateRowStyles: { fillColor: [20, 20, 24] },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        4: { fontStyle: 'bold', textColor: [74, 222, 128] }
+      }
+    });
+  }
+
+  // ── Footer ──
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFillColor(14, 14, 16);
+  doc.rect(0, pageH - 12, W, 12, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(107, 107, 128);
+  doc.text('LAB.STUDIO — Sistema de Gestão', margin, pageH - 4);
+  doc.text('Página 1', W - margin, pageH - 4, { align: 'right' });
+
+  const fileName = 'cliente_' + c.nome.replace(/\s+/g, '_').toLowerCase() + '.pdf';
+  doc.save(fileName);
+}
+
+// ─── BACKUP ──────────────────────────────────────────
 function exportarBackup() {
-    const dados = JSON.stringify({ trabalhos: window.trabalhos, clientes: window.clientes, servicos: window.servicos });
-    const blob = new Blob([dados], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `backup_lab_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  const dados = {
+    versao: '1.0',
+    exportadoEm: new Date().toISOString(),
+    trabalhos,
+    clientes
+  };
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+  a.href     = url;
+  a.download = `lab_backup_${data}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function importarBackup(event) {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const d = JSON.parse(e.target.result);
-        if(confirm('Importar dados?')) {
-            if(d.clientes) for(let c of d.clientes) await window._setDoc(window._userDoc('clientes', c.id), c);
-            if(d.servicos) for(let s of d.servicos) await window._setDoc(window._userDoc('servicos', s.id), s);
-            if(d.trabalhos) for(let t of d.trabalhos) await window._setDoc(window._userDoc('trabalhos', t.id), t);
-            alert('Sucesso!');
-        }
-    };
-    reader.readAsText(event.target.files[0]);
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const dados = JSON.parse(e.target.result);
+      if (!dados.trabalhos || !dados.clientes) {
+        alert('Arquivo inválido. Selecione um backup gerado pelo LAB.STUDIO.');
+        return;
+      }
+      if (!confirm(`Importar backup de ${new Date(dados.exportadoEm).toLocaleString('pt-BR')}?\n\n${dados.clientes.length} clientes e ${dados.trabalhos.length} trabalhos serão restaurados.\n\nOs dados atuais serão substituídos.`)) return;
+
+      document.getElementById('sync-status').textContent = '⏳ Importando...';
+      for (const c of dados.clientes) await saveClienteFB(c);
+      for (const t of dados.trabalhos) await saveTrabalhoFB(t);
+      document.getElementById('sync-status').textContent = '🟢 Conectado';
+      alert('Backup importado com sucesso!');
+    } catch(err) {
+      alert('Erro ao ler o arquivo. Verifique se é um backup válido.');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
-window.renderDashboard = renderDashboard; window.renderTrabalhos = renderTrabalhos;
-window.renderClientes = renderClientes; window.renderServicos = renderServicos;
-window.updateBadges = updateBadges;
+// ─── INIT ─────────────────────────────────────────────
+// A inicialização é feita pelo onAuthStateChanged no módulo Firebase
+window._appReady = false;
+
+// ─── EXPOR FUNÇÕES AO ESCOPO GLOBAL ──────────────────
+window.switchTab         = switchTab;
+window.setFilter         = setFilter;
+window.openModal         = openModal;
+window.closeModal        = closeModal;
+window.selectType        = selectType;
+window.calcValorDigital  = calcValorDigital;
+window.saveTrabalho      = saveTrabalho;
+window.deleteTrabalho    = deleteTrabalho;
+window.openClienteModal  = openClienteModal;
+window.closeClienteModal = closeClienteModal;
+window.saveCliente       = saveCliente;
+window.deleteCliente     = deleteCliente;
+window.exportClientePDF  = exportClientePDF;
+window.exportarBackup    = exportarBackup;
+window.importarBackup    = importarBackup;
+window.renderTrabalhos   = renderTrabalhos;
+window.renderClientes    = renderClientes;
+window.renderDashboard   = renderDashboard;
+window.updateBadges      = updateBadges;
+</script>
+
+<script>
+// ── PWA Service Worker ──
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'lab-studio-v1';
+    const ASSETS = ['./', './index.html'];
+
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+      self.skipWaiting();
+    });
+
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys =>
+        Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      ));
+      self.clients.claim();
+    });
+
+    self.addEventListener('fetch', e => {
+      if (e.request.method !== 'GET') return;
+      e.respondWith(
+        fetch(e.request).catch(() => caches.match(e.request))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
 </script>
 </body>
 </html>
