@@ -1503,6 +1503,27 @@ function importarBackup(event) {
 // ─── INIT ─────────────────────────────────────────────
 // A inicialização é feita pelo onAuthStateChanged no módulo Firebase
 window._appReady = false;
+
+// ─── EXPOR FUNÇÕES AO ESCOPO GLOBAL ──────────────────
+window.switchTab         = switchTab;
+window.setFilter         = setFilter;
+window.openModal         = openModal;
+window.closeModal        = closeModal;
+window.selectType        = selectType;
+window.calcValorDigital  = calcValorDigital;
+window.saveTrabalho      = saveTrabalho;
+window.deleteTrabalho    = deleteTrabalho;
+window.openClienteModal  = openClienteModal;
+window.closeClienteModal = closeClienteModal;
+window.saveCliente       = saveCliente;
+window.deleteCliente     = deleteCliente;
+window.exportClientePDF  = exportClientePDF;
+window.exportarBackup    = exportarBackup;
+window.importarBackup    = importarBackup;
+window.renderTrabalhos   = renderTrabalhos;
+window.renderClientes    = renderClientes;
+window.renderDashboard   = renderDashboard;
+window.updateBadges      = updateBadges;
 </script>
 </body>
 </html>
