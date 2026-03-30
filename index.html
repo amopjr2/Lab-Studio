@@ -31,68 +31,49 @@ const db       = getFirestore(app);
 const auth     = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-let unsubTrabalhos = null;
-let unsubClientes  = null;
-let unsubServicos  = null;
+let unsubTrabalhos = null, unsubClientes = null, unsubServicos = null;
 
 function userCol(colName) { return collection(db, 'usuarios', window._uid, colName); }
 function userDoc(colName, id) { return doc(db, 'usuarios', window._uid, colName, id); }
 
-window._db        = db;
-window._auth      = auth;
-window._signOut   = () => signOut(auth);
-window._setDoc    = setDoc;
-window._deleteDoc = deleteDoc;
-window._userDoc   = userDoc;
-
 window.fazerLogin = async () => {
-  try { await signInWithPopup(auth, provider); } 
-  catch(e) { document.getElementById('login-error').textContent = 'Erro ao fazer login.'; }
+  try { await signInWithPopup(auth, provider); } catch(e) { document.getElementById('login-error').textContent = 'Erro ao fazer login.'; }
 };
 
 onAuthStateChanged(auth, user => {
-  if (unsubTrabalhos) unsubTrabalhos();
-  if (unsubClientes)  unsubClientes();
-  if (unsubServicos)  unsubServicos();
-  
+  if (unsubTrabalhos) unsubTrabalhos(); if (unsubClientes) unsubClientes(); if (unsubServicos) unsubServicos();
   if (user) {
     window._uid = user.uid;
     document.getElementById('tela-login').style.display = 'none';
-    document.getElementById('app-root').style.display   = 'block';
-    document.getElementById('sync-status').textContent  = '🟢 ' + (user.displayName || 'Online');
+    document.getElementById('app-root').style.display = 'block';
+    document.getElementById('sync-status').textContent = '🟢 ' + (user.displayName || 'Online');
 
     unsubTrabalhos = onSnapshot(userCol('trabalhos'), snap => {
-      window.trabalhos = [];
-      snap.forEach(d => window.trabalhos.push(d.data()));
+      window.trabalhos = []; snap.forEach(d => window.trabalhos.push(d.data()));
       window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
-      refreshAll();
+      refreshUI();
     });
-
     unsubClientes = onSnapshot(userCol('clientes'), snap => {
-      window.clientes = [];
-      snap.forEach(d => window.clientes.push(d.data()));
-      refreshAll();
+      window.clientes = []; snap.forEach(d => window.clientes.push(d.data()));
+      refreshUI();
     });
-
     unsubServicos = onSnapshot(userCol('servicos'), snap => {
-      window.servicos = [];
-      snap.forEach(d => window.servicos.push(d.data()));
-      refreshAll();
+      window.servicos = []; snap.forEach(d => window.servicos.push(d.data()));
+      refreshUI();
     });
-
   } else {
     document.getElementById('tela-login').style.display = 'flex';
-    document.getElementById('app-root').style.display   = 'none';
+    document.getElementById('app-root').style.display = 'none';
   }
 });
 
-function refreshAll() {
-    if(window.renderDashboard) window.renderDashboard();
-    if(window.renderTrabalhos) window.renderTrabalhos();
-    if(window.renderClientes)  window.renderClientes();
-    if(window.renderServicos)  window.renderServicos();
-    if(window.updateBadges)    window.updateBadges();
+function refreshUI() {
+    window.renderDashboard?.(); window.renderTrabalhos?.(); 
+    window.renderClientes?.(); window.renderServicos?.(); window.updateBadges?.();
 }
+
+window._signOut = () => signOut(auth);
+window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDoc;
 </script>
 <style>
   :root {
@@ -109,7 +90,7 @@ function refreshAll() {
     --text-dim: #9898b0;
     --green: #4ade80;
     --red: #f87171;
-    --radius: 12px;
+    --radius: 10px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -119,192 +100,160 @@ function refreshAll() {
     color: var(--text);
     font-family: 'Syne', sans-serif;
     min-height: 100vh;
-    line-height: 1.4;
+    overflow-x: hidden;
   }
 
-  /* HEADER OTIMIZADO */
+  /* TEXTURA DE FUNDO */
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+
+  /* HEADER */
   header {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(14,14,16,0.9);
-    backdrop-filter: blur(20px);
+    background: rgba(14,14,16,0.85); backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 65px;
   }
 
-  .logo { font-size: 16px; font-weight: 800; letter-spacing: 0.1em; }
+  .logo { font-size: 18px; font-weight: 800; letter-spacing: 0.12em; display: flex; align-items: center; gap: 10px; }
   .logo span { color: var(--accent-analog); }
 
-  .header-actions { display: flex; gap: 8px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
 
-  .btn-icon {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px; border-radius: 10px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  .btn-backup {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 8px 14px; border-radius: var(--radius); font-weight: 600; font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; transition: all .2s;
+  }
+  .btn-add {
+    background: var(--accent-analog); color: #000; border: none; padding: 10px 18px;
+    border-radius: var(--radius); font-weight: 700; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
   }
 
-  .btn-add-main {
-    background: var(--accent-analog);
-    color: #000; border: none;
-    padding: 8px 14px; border-radius: 10px;
-    font-weight: 700; font-size: 13px; cursor: pointer;
-  }
-
-  /* NAV SCROLLÁVEL NO MOBILE */
-  nav {
-    display: flex; gap: 8px;
-    padding: 10px 16px 0;
-    border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
+  /* NAV */
+  nav { display: flex; gap: 4px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); position: relative; z-index: 1; overflow-x: auto; scrollbar-width: none; }
   nav::-webkit-scrollbar { display: none; }
-  
-  .tab {
-    padding: 10px 16px;
-    font-size: 13px; font-weight: 600;
-    color: var(--text-muted);
-    white-space: nowrap;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-  }
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
   .tab.active { color: var(--text); border-color: var(--accent-analog); }
 
-  main { padding: 16px; max-width: 1200px; margin: 0 auto; }
-
+  main { padding: 28px 32px; position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; }
   .page { display: none; }
   .page.active { display: block; animation: fadeIn .2s ease; }
 
-  /* CARDS E GRIDS */
-  .stats-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;
-  }
-  @media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+  /* TABELA */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; margin-top: 15px; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  th { padding: 14px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 14px 16px; border-bottom: 1px solid rgba(42,42,53,0.5); font-size: 14px; }
 
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 16px; border-radius: var(--radius);
-  }
-  .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
-  .stat-value { font-size: 18px; font-weight: 800; font-family: 'DM Mono', monospace; }
-
-  /* TABELAS MOBILE RESPONSIVE */
-  .table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow-x: auto;
-  }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 12px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-  td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-  /* MODAL MOBILE FIXED */
+  /* MODAL - DESIGN HIBRIDO (CENTRO PC / GAVETA CELULAR) */
   .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-    z-index: 1000; align-items: flex-end; justify-content: center;
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(6px); z-index: 1000;
+    align-items: center; justify-content: center; /* Desktop default */
   }
-  @media (min-width: 768px) { .modal-overlay { align-items: center; } }
   .modal-overlay.open { display: flex; }
 
   .modal {
-    background: var(--surface);
-    width: 100%; max-height: 90vh;
-    border-radius: 20px 20px 0 0;
-    padding: 24px; overflow-y: auto;
-    position: relative;
-  }
-  @media (min-width: 768px) {
-    .modal { width: 500px; border-radius: 20px; max-height: 85vh; }
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto; position: relative;
+    animation: modalIn .25s cubic-bezier(.34,1.56,.64,1);
   }
 
-  .form-group { margin-bottom: 16px; }
-  label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-weight: 700; text-transform: uppercase; }
-  
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
   input, select, textarea {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border); color: #fff;
-    padding: 12px; border-radius: 10px; font-family: 'DM Mono', monospace;
+    background: var(--surface2); border: 1px solid var(--border); color: #fff;
+    padding: 12px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 14px; outline: none;
+  }
+  input:focus { border-color: var(--accent-analog); }
+
+  /* AJUSTES MOBILE */
+  @media (max-width: 768px) {
+    header { padding: 0 16px; }
+    main { padding: 16px; }
+    nav { padding: 10px 16px 0; }
+    .header-right span, .btn-backup span { display: none; } /* Esconde textos */
+    .btn-add { padding: 10px 14px; }
+    .modal-overlay { align-items: flex-end; } /* Modal vira gaveta no celular */
+    .modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; animation: modalSlideUp 0.3s ease; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
   }
 
-  .type-toggle { display: flex; background: var(--surface2); border-radius: 10px; padding: 4px; gap: 4px; }
-  .type-option { flex: 1; text-align: center; padding: 8px; font-size: 12px; border-radius: 8px; cursor: pointer; color: var(--text-muted); }
-  .type-option.active.analog { background: var(--accent-analog); color: #000; }
-  .type-option.active.digital { background: var(--accent-digital); color: #fff; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  @keyframes modalSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-  .btn-save { width: 100%; padding: 14px; background: var(--accent-analog); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 10px; }
-  
-  /* BADGES */
-  .badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  /* DASHBOARD CARDS */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); border-top: 2px solid var(--accent-analog); }
+  .stat-value { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; margin-top: 5px; }
+
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
   .badge.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
   .badge.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 </style>
 </head>
 <body>
 
 <div id="tela-login" style="display:flex;position:fixed;inset:0;z-index:9999;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:20px;">
-  <div style="font-size:24px;font-weight:800;">LAB<span style="color:var(--accent-analog)">.</span>STUDIO</div>
-  <button onclick="fazerLogin()" style="padding:12px 24px;border-radius:12px;border:none;font-weight:700;cursor:pointer;">Entrar com Google</button>
-  <div id="login-error" style="color:var(--red);font-size:12px;"></div>
+    <div style="font-size:32px;font-weight:800;letter-spacing:0.1em">LAB<span style="color:var(--accent-analog)">.</span>STUDIO</div>
+    <button onclick="fazerLogin()" style="padding:14px 28px;border-radius:10px;border:none;background:white;color:black;font-weight:700;cursor:pointer;font-family:'Syne'">Entrar com Google</button>
+    <div id="login-error" style="color:var(--red);font-size:13px"></div>
 </div>
 
 <div id="app-root" style="display:none">
   <header>
     <div class="logo">LAB<span>.</span>STUDIO</div>
-    <div class="header-actions">
-        <button class="btn-icon" onclick="exportarBackup()" title="Backup">⬇️</button>
-        <label class="btn-icon" title="Importar">
-            ⬆️ <input type="file" onchange="importarBackup(event)" style="display:none">
-        </label>
-        <button class="btn-add-main" onclick="openModal()">+ NOVO</button>
+    <div class="header-right">
+      <span id="sync-status" style="font-size:11px;color:var(--text-muted);font-family:'DM Mono'">⏳...</span>
+      <button class="btn-backup" onclick="exportarBackup()"><span>Backup</span> ⬇️</button>
+      <label class="btn-backup">
+        <span>Importar</span> ⬆️ <input type="file" onchange="importarBackup(event)" style="display:none">
+      </label>
+      <button class="btn-add" onclick="openModal()">+ <span>Novo Trabalho</span></button>
     </div>
   </header>
 
   <nav>
-    <div class="tab active" onclick="switchTab('dashboard')">Painel</div>
-    <div class="tab" onclick="switchTab('trabalhos')">Trabalhos <small id="badge-trabalhos"></small></div>
-    <div class="tab" onclick="switchTab('clientes')">Clientes <small id="badge-clientes"></small></div>
-    <div class="tab" onclick="switchTab('servicos')">Catálogo/Preços</div>
+    <div class="tab active" onclick="switchTab('dashboard')">◈ Dashboard</div>
+    <div class="tab" onclick="switchTab('trabalhos')">⊞ Trabalhos <span id="badge-trabalhos" style="opacity:0.5; font-size:10px"></span></div>
+    <div class="tab" onclick="switchTab('clientes')">◎ Clientes <span id="badge-clientes" style="opacity:0.5; font-size:10px"></span></div>
+    <div class="tab" onclick="switchTab('servicos')">🏷️ Catálogo de Preços</div>
   </nav>
 
   <main>
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
-        <div id="sync-status" style="font-size:10px; margin-bottom:10px; color:var(--text-muted)">Conectando...</div>
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">Analógico</div>
-                <div class="stat-value" id="dash-analog">0,00</div>
+                <div class="stat-label" style="font-size:11px; color:var(--text-muted); font-weight:700">ANALÓGICO</div>
+                <div class="stat-value" id="dash-analog">R$ 0,00</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Digital</div>
-                <div class="stat-value" id="dash-digital">0,00</div>
+            <div class="stat-card" style="border-top-color: var(--accent-digital)">
+                <div class="stat-label" style="font-size:11px; color:var(--text-muted); font-weight:700">DIGITAL</div>
+                <div class="stat-value" id="dash-digital">R$ 0,00</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Total</div>
-                <div class="stat-value" id="dash-total">0,00</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Serviços</div>
-                <div class="stat-value" id="dash-serv-count">0</div>
+            <div class="stat-card" style="border-top-color: var(--green)">
+                <div class="stat-label" style="font-size:11px; color:var(--text-muted); font-weight:700">TOTAL GERAL</div>
+                <div class="stat-value" id="dash-total">R$ 0,00</div>
             </div>
         </div>
-        <div class="section-title" style="margin: 20px 0 10px; font-weight: 700">Trabalhos Recentes</div>
+        <h3 style="margin:30px 0 15px; font-size:16px">Trabalhos Recentes</h3>
         <div id="recent-list"></div>
     </div>
 
     <!-- TRABALHOS -->
     <div class="page" id="page-trabalhos">
-        <input type="text" id="search-trabalhos" placeholder="Buscar trabalho..." oninput="renderTrabalhos()" style="margin-bottom:15px">
+        <input type="text" id="search-trabalhos" placeholder="Buscar por cliente ou serviço..." oninput="renderTrabalhos()" style="width:100%; max-width:400px; margin-bottom:20px">
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Cliente</th><th>Serviço</th><th>Valor</th><th>Ações</th></tr></thead>
+                <thead><tr><th>Cliente</th><th>Trabalho</th><th>Tipo</th><th>Valor</th><th>Ações</th></tr></thead>
                 <tbody id="tbody-trabalhos"></tbody>
             </table>
         </div>
@@ -312,7 +261,7 @@ function refreshAll() {
 
     <!-- CLIENTES -->
     <div class="page" id="page-clientes">
-        <button class="btn-save" onclick="openClienteModal()" style="margin-bottom:15px">+ Adicionar Cliente</button>
+        <button class="btn-add" onclick="openClienteModal()" style="margin-bottom:20px">+ Novo Cliente</button>
         <div class="table-wrap">
             <table>
                 <thead><tr><th>Nome</th><th>Contato</th><th>Ações</th></tr></thead>
@@ -321,312 +270,13 @@ function refreshAll() {
         </div>
     </div>
 
-    <!-- SERVIÇOS (TABELA DE PREÇOS) -->
+    <!-- CATALOGO -->
     <div class="page" id="page-servicos">
-        <div style="background: var(--surface); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px;">
-            <h4 style="margin-bottom:15px">Novo Serviço no Catálogo</h4>
-            <div class="form-group">
-                <label>Nome do Serviço</label>
-                <input type="text" id="s-nome" placeholder="Ex: Prótese Acrílica">
-            </div>
-            <div class="form-group">
-                <label>Preço Base (R$)</label>
-                <input type="number" id="s-preco" placeholder="0.00" step="0.01">
-            </div>
-            <div class="form-group">
-                <label>Categoria</label>
-                <select id="s-tipo">
-                    <option value="analog">Analógico / Acrílico</option>
-                    <option value="digital">Digital</option>
-                </select>
-            </div>
-            <button class="btn-save" onclick="saveServico()">Cadastrar no Catálogo</button>
-        </div>
-        
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Serviço</th><th>Preço</th><th>Ações</th></tr></thead>
-                <tbody id="tbody-servicos"></tbody>
-            </table>
-        </div>
-    </div>
-  </main>
-
-  <!-- MODAL TRABALHO -->
-  <div class="modal-overlay" id="modal-trabalho">
-    <div class="modal">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px">
-            <h3 id="modal-title">Novo Trabalho</h3>
-            <button onclick="closeModal()" style="background:none; border:none; color:var(--text-muted); font-size:20px">✕</button>
-        </div>
-        <input type="hidden" id="edit-id">
-        
-        <div class="form-group">
-            <label>Tipo</label>
-            <div class="type-toggle">
-                <div id="t-opt-analog" class="type-option active analog" onclick="setTipo('analog')">Analógico</div>
-                <div id="t-opt-digital" class="type-option digital" onclick="setTipo('digital')">Digital</div>
-            </div>
-            <input type="hidden" id="f-tipo" value="analog">
-        </div>
-
-        <div class="form-group">
-            <label>Catálogo de Preços (Opcional)</label>
-            <select id="f-catalogo" onchange="applyCatalogo()">
-                <option value="">— Selecionar do catálogo —</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Nome do Trabalho / Prótese</label>
-            <input type="text" id="f-nome" placeholder="Nome do trabalho">
-        </div>
-
-        <div class="form-group">
-            <label>Cliente</label>
-            <select id="f-cliente"><option value="">Selecionar Cliente</option></select>
-        </div>
-
-        <div class="form-group">
-            <label>Valor (R$)</label>
-            <input type="number" id="f-valor" step="0.01" placeholder="0.00">
-        </div>
-
-        <div class="form-group" id="g-digital" style="display:none">
-            <label>Elementos</label>
-            <input type="number" id="f-elementos" value="1" oninput="recalcDigital()">
-        </div>
-
-        <div class="form-group">
-            <label>Status</label>
-            <select id="f-status">
-                <option value="pendente">Pendente</option>
-                <option value="andamento">Em Andamento</option>
-                <option value="concluido">Concluído</option>
-            </select>
-        </div>
-
-        <button class="btn-save" onclick="saveTrabalho()">Salvar Trabalho</button>
-    </div>
-  </div>
-
-  <!-- MODAL CLIENTE -->
-  <div class="modal-overlay" id="modal-cliente">
-    <div class="modal">
-        <h3>Novo Cliente</h3>
-        <div class="form-group" style="margin-top:15px">
-            <label>Nome</label>
-            <input type="text" id="c-nome">
-        </div>
-        <div class="form-group">
-            <label>Contato</label>
-            <input type="text" id="c-contato">
-        </div>
-        <button class="btn-save" onclick="saveCliente()">Salvar Cliente</button>
-        <button class="btn-save" onclick="closeClienteModal()" style="background:none; color:var(--text-muted)">Cancelar</button>
-    </div>
-  </div>
-
-</div>
-
-<script>
-// --- LOGICA GERAL ---
-let currentTipo = 'analog';
-window.trabalhos = [];
-window.clientes = [];
-window.servicos = [];
-
-function switchTab(tab) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('page-' + tab).classList.add('active');
-    event.currentTarget.classList.add('active');
-}
-
-function fmt(n) { return Number(n).toLocaleString('pt-BR', {minimumFractionDigits:2}); }
-
-// --- SERVIÇOS (TABELA DE PREÇOS) ---
-async function saveServico() {
-    const nome = document.getElementById('s-nome').value;
-    const preco = parseFloat(document.getElementById('s-preco').value) || 0;
-    const tipo = document.getElementById('s-tipo').value;
-    if(!nome) return alert('Nome obrigatorio');
-    const id = Date.now().toString();
-    await window._setDoc(window._userDoc('servicos', id), {id, nome, preco, tipo});
-    document.getElementById('s-nome').value = '';
-    document.getElementById('s-preco').value = '';
-}
-
-function renderServicos() {
-    const tbody = document.getElementById('tbody-servicos');
-    tbody.innerHTML = window.servicos.map(s => `
-        <tr>
-            <td>${s.nome} <br> <small class="badge ${s.tipo}">${s.tipo}</small></td>
-            <td>R$ ${fmt(s.preco)}</td>
-            <td><button onclick="deleteServico('${s.id}')" style="background:none; border:none; color:var(--red)">Excluir</button></td>
-        </tr>
-    `).join('');
-    
-    // Atualiza dropdown no modal de trabalho
-    const catalogo = document.getElementById('f-catalogo');
-    catalogo.innerHTML = '<option value="">— Selecionar do catálogo —</option>' + 
-        window.servicos.map(s => `<option value="${s.id}">${s.nome} (R$ ${fmt(s.preco)})</option>`).join('');
-}
-
-async function deleteServico(id) {
-    if(confirm('Excluir serviço do catálogo?')) await window._deleteDoc(window._userDoc('servicos', id));
-}
-
-// --- TRABALHOS ---
-function openModal(id = null) {
-    document.getElementById('modal-trabalho').classList.add('open');
-    const selCliente = document.getElementById('f-cliente');
-    selCliente.innerHTML = '<option value="">Selecionar Cliente</option>' + 
-        window.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-    
-    if(!id) {
-        document.getElementById('edit-id').value = '';
-        document.getElementById('f-nome').value = '';
-        document.getElementById('f-valor').value = '';
-        setTipo('analog');
-    }
-}
-
-function closeModal() { document.getElementById('modal-trabalho').classList.remove('open'); }
-
-function setTipo(t) {
-    currentTipo = t;
-    document.getElementById('f-tipo').value = t;
-    document.getElementById('t-opt-analog').classList.toggle('active', t === 'analog');
-    document.getElementById('t-opt-digital').classList.toggle('active', t === 'digital');
-    document.getElementById('g-digital').style.display = (t === 'digital' ? 'block' : 'none');
-}
-
-function applyCatalogo() {
-    const servId = document.getElementById('f-catalogo').value;
-    const serv = window.servicos.find(s => s.id === servId);
-    if(serv) {
-        document.getElementById('f-nome').value = serv.nome;
-        document.getElementById('f-valor').value = serv.preco;
-        setTipo(serv.tipo);
-    }
-}
-
-async function saveTrabalho() {
-    const id = document.getElementById('edit-id').value || Date.now().toString();
-    const dados = {
-        id,
-        nome: document.getElementById('f-nome').value,
-        clienteId: document.getElementById('f-cliente').value,
-        valor: parseFloat(document.getElementById('f-valor').value) || 0,
-        tipo: document.getElementById('f-tipo').value,
-        status: document.getElementById('f-status').value,
-        elementos: parseInt(document.getElementById('f-elementos').value) || 1,
-        criadoEm: Date.now()
-    };
-    await window._setDoc(window._userDoc('trabalhos', id), dados);
-    closeModal();
-}
-
-function renderTrabalhos() {
-    const busca = document.getElementById('search-trabalhos').value.toLowerCase();
-    const lista = window.trabalhos.filter(t => t.nome.toLowerCase().includes(busca));
-    const tbody = document.getElementById('tbody-trabalhos');
-    tbody.innerHTML = lista.map(t => {
-        const cli = window.clientes.find(c => c.id === t.clienteId);
-        return `
-        <tr>
-            <td><b>${cli ? cli.nome : '?'}</b></td>
-            <td>${t.nome} <br> <span class="badge ${t.tipo}">${t.tipo}</span></td>
-            <td>R$ ${fmt(t.valor)}</td>
-            <td><button onclick="deleteTrabalho('${t.id}')" style="color:var(--red); background:none; border:none">✕</button></td>
-        </tr>
-    `}).join('');
-}
-
-async function deleteTrabalho(id) {
-    if(confirm('Excluir trabalho?')) await window._deleteDoc(window._userDoc('trabalhos', id));
-}
-
-// --- CLIENTES ---
-function openClienteModal() { document.getElementById('modal-cliente').classList.add('open'); }
-function closeClienteModal() { document.getElementById('modal-cliente').classList.remove('open'); }
-
-async function saveCliente() {
-    const nome = document.getElementById('c-nome').value;
-    if(!nome) return;
-    const id = Date.now().toString();
-    await window._setDoc(window._userDoc('clientes', id), {id, nome, contato: document.getElementById('c-contato').value});
-    closeClienteModal();
-}
-
-function renderClientes() {
-    const tbody = document.getElementById('tbody-clientes');
-    tbody.innerHTML = window.clientes.map(c => `
-        <tr>
-            <td>${c.nome}</td>
-            <td>${c.contato || '-'}</td>
-            <td><button onclick="deleteCliente('${c.id}')" style="color:var(--red); background:none; border:none">✕</button></td>
-        </tr>
-    `).join('');
-}
-
-async function deleteCliente(id) {
-    if(confirm('Excluir cliente?')) await window._deleteDoc(window._userDoc('clientes', id));
-}
-
-// --- DASHBOARD ---
-function renderDashboard() {
-    const totA = window.trabalhos.filter(t => t.tipo === 'analog').reduce((acc, t) => acc + t.valor, 0);
-    const totD = window.trabalhos.filter(t => t.tipo === 'digital').reduce((acc, t) => acc + t.valor, 0);
-    document.getElementById('dash-analog').textContent = fmt(totA);
-    document.getElementById('dash-digital').textContent = fmt(totD);
-    document.getElementById('dash-total').textContent = fmt(totA + totD);
-    document.getElementById('dash-serv-count').textContent = window.servicos.length;
-
-    const recentes = window.trabalhos.slice(0, 5);
-    document.getElementById('recent-list').innerHTML = recentes.map(t => `
-        <div style="background:var(--surface); padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid var(--border); display:flex; justify-content:space-between">
-            <span>${t.nome}</span>
-            <span style="font-family:monospace">R$ ${fmt(t.valor)}</span>
-        </div>
-    `).join('');
-}
-
-function updateBadges() {
-    document.getElementById('badge-trabalhos').textContent = `(${window.trabalhos.length})`;
-    document.getElementById('badge-clientes').textContent = `(${window.clientes.length})`;
-}
-
-// --- BACKUP ---
-function exportarBackup() {
-    const dados = { trabalhos: window.trabalhos, clientes: window.clientes, servicos: window.servicos };
-    const blob = new Blob([JSON.stringify(dados)], {type: 'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `backup_lab_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-}
-
-function importarBackup(event) {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const d = JSON.parse(e.target.result);
-        if(confirm('Importar dados? Isso substituirá itens duplicados.')) {
-            if(d.clientes) for(let c of d.clientes) await window._setDoc(window._userDoc('clientes', c.id), c);
-            if(d.servicos) for(let s of d.servicos) await window._setDoc(window._userDoc('servicos', s.id), s);
-            if(d.trabalhos) for(let t of d.trabalhos) await window._setDoc(window._userDoc('trabalhos', t.id), t);
-            alert('Importação concluída!');
-        }
-    };
-    reader.readAsText(event.target.files[0]);
-}
-
-window.renderDashboard = renderDashboard;
-window.renderTrabalhos = renderTrabalhos;
-window.renderClientes = renderClientes;
-window.renderServicos = renderServicos;
-window.updateBadges = updateBadges;
-</script>
-</body>
-</html>
+        <div style="background:var(--surface); padding:24px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:24px">
+            <h4 style="margin-bottom:15px">Adicionar ao Catálogo</h4>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px">
+                <div class="form-group"><label>Serviço</label><input type="text" id="s-nome" placeholder="Ex: Prótese Total"></div>
+                <div class="form-group"><label>Preço Base</label><input type="number" id="s-preco" step="0.01"></div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="s-tipo"><option value
