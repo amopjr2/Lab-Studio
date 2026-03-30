@@ -31,8 +31,6 @@ const db       = getFirestore(app);
 const auth     = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-let unsubTrabalhos = null, unsubClientes = null, unsubServicos = null;
-
 function userCol(colName) { return collection(db, 'usuarios', window._uid, colName); }
 function userDoc(colName, id) { return doc(db, 'usuarios', window._uid, colName, id); }
 
@@ -41,23 +39,22 @@ window.fazerLogin = async () => {
 };
 
 onAuthStateChanged(auth, user => {
-  if (unsubTrabalhos) unsubTrabalhos(); if (unsubClientes) unsubClientes(); if (unsubServicos) unsubServicos();
   if (user) {
     window._uid = user.uid;
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-root').style.display = 'block';
     document.getElementById('sync-status').textContent = '🟢 ' + (user.displayName || 'Online');
 
-    unsubTrabalhos = onSnapshot(userCol('trabalhos'), snap => {
+    onSnapshot(userCol('trabalhos'), snap => {
       window.trabalhos = []; snap.forEach(d => window.trabalhos.push(d.data()));
       window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
       refreshUI();
     });
-    unsubClientes = onSnapshot(userCol('clientes'), snap => {
+    onSnapshot(userCol('clientes'), snap => {
       window.clientes = []; snap.forEach(d => window.clientes.push(d.data()));
       refreshUI();
     });
-    unsubServicos = onSnapshot(userCol('servicos'), snap => {
+    onSnapshot(userCol('servicos'), snap => {
       window.servicos = []; snap.forEach(d => window.servicos.push(d.data()));
       refreshUI();
     });
@@ -68,13 +65,16 @@ onAuthStateChanged(auth, user => {
 });
 
 function refreshUI() {
-    window.renderDashboard?.(); window.renderTrabalhos?.(); 
-    window.renderClientes?.(); window.renderServicos?.(); window.updateBadges?.();
+    if(window.renderDashboard) window.renderDashboard();
+    if(window.renderTrabalhos) window.renderTrabalhos();
+    if(window.renderClientes)  window.renderClientes();
+    if(window.renderServicos)  window.renderServicos();
+    if(window.updateBadges)    window.updateBadges();
 }
 
-window._signOut = () => signOut(auth);
-window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDoc;
+window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDoc; window._signOut = () => signOut(auth);
 </script>
+
 <style>
   :root {
     --bg: #0e0e10;
@@ -94,31 +94,20 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* TEXTURA DE FUNDO */
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
   body::before {
     content: ''; position: fixed; inset: 0;
     background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
 
-  /* HEADER */
   header {
     position: sticky; top: 0; z-index: 100;
     background: rgba(14,14,16,0.85); backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
     padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 65px;
   }
-
-  .logo { font-size: 18px; font-weight: 800; letter-spacing: 0.12em; display: flex; align-items: center; gap: 10px; }
+  .logo { font-size: 18px; font-weight: 800; letter-spacing: 0.12em; }
   .logo span { color: var(--accent-analog); }
 
   .header-right { display: flex; align-items: center; gap: 12px; }
@@ -134,7 +123,6 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
     display: flex; align-items: center; gap: 6px;
   }
 
-  /* NAV */
   nav { display: flex; gap: 4px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); position: relative; z-index: 1; overflow-x: auto; scrollbar-width: none; }
   nav::-webkit-scrollbar { display: none; }
   .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
@@ -144,59 +132,45 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
   .page { display: none; }
   .page.active { display: block; animation: fadeIn .2s ease; }
 
-  /* TABELA */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); border-top: 2px solid var(--accent-analog); }
+  .stat-value { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; margin-top: 5px; }
+
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; margin-top: 15px; }
   table { width: 100%; border-collapse: collapse; min-width: 600px; }
   th { padding: 14px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: left; border-bottom: 1px solid var(--border); }
   td { padding: 14px 16px; border-bottom: 1px solid rgba(42,42,53,0.5); font-size: 14px; }
 
-  /* MODAL - DESIGN HIBRIDO (CENTRO PC / GAVETA CELULAR) */
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(6px); z-index: 1000;
-    align-items: center; justify-content: center; /* Desktop default */
+    backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center;
   }
   .modal-overlay.open { display: flex; }
-
   .modal {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw;
     max-height: 90vh; overflow-y: auto; position: relative;
-    animation: modalIn .25s cubic-bezier(.34,1.56,.64,1);
   }
 
   .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
   label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
   input, select, textarea {
     background: var(--surface2); border: 1px solid var(--border); color: #fff;
-    padding: 12px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 14px; outline: none;
+    padding: 12px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 14px; outline: none; width: 100%;
   }
-  input:focus { border-color: var(--accent-analog); }
 
-  /* AJUSTES MOBILE */
+  .btn-save { width: 100%; padding: 14px; background: var(--accent-analog); color: #000; border: none; border-radius: 10px; font-weight: 800; cursor: pointer; margin-top: 10px; font-family: 'Syne'; }
+  .action-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin-right: 4px; }
+  .action-btn.pdf { color: var(--accent-analog); border-color: var(--accent-analog-dim); }
+
   @media (max-width: 768px) {
     header { padding: 0 16px; }
     main { padding: 16px; }
-    nav { padding: 10px 16px 0; }
-    .header-right span, .btn-backup span { display: none; } /* Esconde textos */
-    .btn-add { padding: 10px 14px; }
-    .modal-overlay { align-items: flex-end; } /* Modal vira gaveta no celular */
-    .modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; animation: modalSlideUp 0.3s ease; }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .header-right span, .btn-backup span { display: none; }
+    .modal-overlay { align-items: flex-end; }
+    .modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; }
   }
-
-  @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  @keyframes modalSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-  /* DASHBOARD CARDS */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); border-top: 2px solid var(--accent-analog); }
-  .stat-value { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; margin-top: 5px; }
-
-  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-  .badge.analog { background: var(--accent-analog-dim); color: var(--accent-analog); }
-  .badge.digital { background: var(--accent-digital-dim); color: var(--accent-digital); }
 </style>
 </head>
 <body>
@@ -222,9 +196,9 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
 
   <nav>
     <div class="tab active" onclick="switchTab('dashboard')">◈ Dashboard</div>
-    <div class="tab" onclick="switchTab('trabalhos')">⊞ Trabalhos <span id="badge-trabalhos" style="opacity:0.5; font-size:10px"></span></div>
-    <div class="tab" onclick="switchTab('clientes')">◎ Clientes <span id="badge-clientes" style="opacity:0.5; font-size:10px"></span></div>
-    <div class="tab" onclick="switchTab('servicos')">🏷️ Catálogo de Preços</div>
+    <div class="tab" onclick="switchTab('trabalhos')">⊞ Trabalhos <span id="badge-trabalhos"></span></div>
+    <div class="tab" onclick="switchTab('clientes')">◎ Clientes <span id="badge-clientes"></span></div>
+    <div class="tab" onclick="switchTab('servicos')">🏷️ Catálogo / Preços</div>
   </nav>
 
   <main>
@@ -232,28 +206,28 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
     <div class="page active" id="page-dashboard">
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label" style="font-size:11px; color:var(--text-muted); font-weight:700">ANALÓGICO</div>
+                <div class="stat-label">ANALÓGICO</div>
                 <div class="stat-value" id="dash-analog">R$ 0,00</div>
             </div>
             <div class="stat-card" style="border-top-color: var(--accent-digital)">
-                <div class="stat-label" style="font-size:11px; color:var(--text-muted); font-weight:700">DIGITAL</div>
+                <div class="stat-label">DIGITAL</div>
                 <div class="stat-value" id="dash-digital">R$ 0,00</div>
             </div>
             <div class="stat-card" style="border-top-color: var(--green)">
-                <div class="stat-label" style="font-size:11px; color:var(--text-muted); font-weight:700">TOTAL GERAL</div>
+                <div class="stat-label">TOTAL GERAL</div>
                 <div class="stat-value" id="dash-total">R$ 0,00</div>
             </div>
         </div>
-        <h3 style="margin:30px 0 15px; font-size:16px">Trabalhos Recentes</h3>
+        <h3 style="margin-bottom:15px; font-size:16px">Trabalhos Recentes</h3>
         <div id="recent-list"></div>
     </div>
 
     <!-- TRABALHOS -->
     <div class="page" id="page-trabalhos">
-        <input type="text" id="search-trabalhos" placeholder="Buscar por cliente ou serviço..." oninput="renderTrabalhos()" style="width:100%; max-width:400px; margin-bottom:20px">
+        <input type="text" id="search-trabalhos" placeholder="Buscar..." oninput="renderTrabalhos()" style="max-width:400px; margin-bottom:20px">
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Cliente</th><th>Trabalho</th><th>Tipo</th><th>Valor</th><th>Ações</th></tr></thead>
+                <thead><tr><th>Cliente</th><th>Trabalho</th><th>Valor</th><th>Ações</th></tr></thead>
                 <tbody id="tbody-trabalhos"></tbody>
             </table>
         </div>
@@ -273,10 +247,234 @@ window._setDoc = setDoc; window._deleteDoc = deleteDoc; window._userDoc = userDo
     <!-- CATALOGO -->
     <div class="page" id="page-servicos">
         <div style="background:var(--surface); padding:24px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:24px">
-            <h4 style="margin-bottom:15px">Adicionar ao Catálogo</h4>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px">
-                <div class="form-group"><label>Serviço</label><input type="text" id="s-nome" placeholder="Ex: Prótese Total"></div>
-                <div class="form-group"><label>Preço Base</label><input type="number" id="s-preco" step="0.01"></div>
+            <h4 style="margin-bottom:15px">Novo Item no Catálogo</h4>
+            <div class="stats-grid" style="border:none; padding:0; margin:0">
+                <div class="form-group"><label>Serviço</label><input type="text" id="s-nome"></div>
+                <div class="form-group"><label>Preço</label><input type="number" id="s-preco" step="0.01"></div>
                 <div class="form-group">
                     <label>Tipo</label>
-                    <select id="s-tipo"><option value
+                    <select id="s-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
+                </div>
+            </div>
+            <button class="btn-save" onclick="saveServico()">Cadastrar no Catálogo</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Serviço</th><th>Preço</th><th>Ações</th></tr></thead>
+                <tbody id="tbody-servicos"></tbody>
+            </table>
+        </div>
+    </div>
+  </main>
+
+  <!-- MODAL TRABALHO -->
+  <div class="modal-overlay" id="modal-trabalho">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+            <h3 id="modal-title">Novo Trabalho</h3>
+            <button onclick="closeModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px">✕</button>
+        </div>
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+            <label>Catálogo de Preços (Opcional)</label>
+            <select id="f-catalogo" onchange="applyCatalogo()"><option value="">— Selecionar —</option></select>
+        </div>
+        <div class="form-group"><label>Nome do Trabalho</label><input type="text" id="f-nome"></div>
+        <div class="form-group"><label>Cliente</label><select id="f-cliente"></select></div>
+        <div class="form-group"><label>Valor (R$)</label><input type="number" id="f-valor" step="0.01"></div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select id="f-tipo"><option value="analog">Analógico</option><option value="digital">Digital</option></select>
+        </div>
+        <button class="btn-save" onclick="saveTrabalho()">Salvar Trabalho</button>
+    </div>
+  </div>
+
+  <!-- MODAL CLIENTE -->
+  <div class="modal-overlay" id="modal-cliente">
+    <div class="modal">
+        <h3>Novo Cliente</h3>
+        <div class="form-group" style="margin-top:15px"><label>Nome</label><input type="text" id="c-nome"></div>
+        <div class="form-group"><label>Contato</label><input type="text" id="c-contato"></div>
+        <button class="btn-save" onclick="saveCliente()">Salvar Cliente</button>
+        <button onclick="closeClienteModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:10px; cursor:pointer">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.trabalhos = []; window.clientes = []; window.servicos = [];
+
+const fmt = (n) => Number(n).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+function switchTab(tab) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+// CATALOGO
+async function saveServico() {
+    const nome = document.getElementById('s-nome').value;
+    const preco = parseFloat(document.getElementById('s-preco').value) || 0;
+    const tipo = document.getElementById('s-tipo').value;
+    if(!nome) return alert('Nome necessário');
+    const id = Date.now().toString();
+    await window._setDoc(window._userDoc('servicos', id), {id, nome, preco, tipo});
+    document.getElementById('s-nome').value = ''; document.getElementById('s-preco').value = '';
+}
+
+function renderServicos() {
+    const tbody = document.getElementById('tbody-servicos');
+    tbody.innerHTML = window.servicos.map(s => `
+        <tr>
+            <td>${s.nome} <br> <small style="color:var(--text-muted)">${s.tipo}</small></td>
+            <td>R$ ${fmt(s.preco)}</td>
+            <td><button class="action-btn" onclick="deleteServico('${s.id}')">✕</button></td>
+        </tr>
+    `).join('');
+    const fCat = document.getElementById('f-catalogo');
+    fCat.innerHTML = '<option value="">— Selecionar —</option>' + window.servicos.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+}
+
+async function deleteServico(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('servicos', id)); }
+
+function applyCatalogo() {
+    const sId = document.getElementById('f-catalogo').value;
+    const s = window.servicos.find(x => x.id === sId);
+    if(s) {
+        document.getElementById('f-nome').value = s.nome;
+        document.getElementById('f-valor').value = s.preco;
+        document.getElementById('f-tipo').value = s.tipo;
+    }
+}
+
+// CLIENTES
+function openClienteModal() { document.getElementById('modal-cliente').classList.add('open'); }
+function closeClienteModal() { document.getElementById('modal-cliente').classList.remove('open'); }
+async function saveCliente() {
+    const nome = document.getElementById('c-nome').value;
+    if(!nome) return;
+    const id = Date.now().toString();
+    await window._setDoc(window._userDoc('clientes', id), {id, nome, contato: document.getElementById('c-contato').value});
+    closeClienteModal();
+}
+function renderClientes() {
+    const tbody = document.getElementById('tbody-clientes');
+    tbody.innerHTML = window.clientes.map(c => `
+        <tr>
+            <td>${c.nome}</td>
+            <td>${c.contato || '-'}</td>
+            <td>
+                <button class="action-btn pdf" onclick="exportPDF('${c.id}')">PDF</button>
+                <button class="action-btn" onclick="deleteCliente('${c.id}')">✕</button>
+            </td>
+        </tr>
+    `).join('');
+}
+async function deleteCliente(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('clientes', id)); }
+
+// TRABALHOS
+function openModal(id = null) {
+    document.getElementById('modal-trabalho').classList.add('open');
+    const cliSel = document.getElementById('f-cliente');
+    cliSel.innerHTML = window.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+    if(!id) {
+        document.getElementById('edit-id').value = ''; document.getElementById('f-nome').value = ''; document.getElementById('f-valor').value = '';
+    }
+}
+function closeModal() { document.getElementById('modal-trabalho').classList.remove('open'); }
+async function saveTrabalho() {
+    const id = document.getElementById('edit-id').value || Date.now().toString();
+    await window._setDoc(window._userDoc('trabalhos', id), {
+        id, nome: document.getElementById('f-nome').value,
+        clienteId: document.getElementById('f-cliente').value,
+        valor: parseFloat(document.getElementById('f-valor').value) || 0,
+        tipo: document.getElementById('f-tipo').value,
+        criadoEm: Date.now()
+    });
+    closeModal();
+}
+function renderTrabalhos() {
+    const busca = document.getElementById('search-trabalhos').value.toLowerCase();
+    const tbody = document.getElementById('tbody-trabalhos');
+    tbody.innerHTML = window.trabalhos.filter(t => t.nome.toLowerCase().includes(busca)).map(t => {
+        const c = window.clientes.find(x => x.id === t.clienteId);
+        return `<tr>
+            <td>${c ? c.nome : '?'}</td>
+            <td>${t.nome} <br> <small style="color:var(--text-muted)">${t.tipo}</small></td>
+            <td>R$ ${fmt(t.valor)}</td>
+            <td><button class="action-btn" onclick="deleteTrabalho('${t.id}')">✕</button></td>
+        </tr>`;
+    }).join('');
+}
+async function deleteTrabalho(id) { if(confirm('Excluir?')) await window._deleteDoc(window._userDoc('trabalhos', id)); }
+
+// DASHBOARD
+function renderDashboard() {
+    const totA = window.trabalhos.filter(t => t.tipo === 'analog').reduce((a, b) => a + b.valor, 0);
+    const totD = window.trabalhos.filter(t => t.tipo === 'digital').reduce((a, b) => a + b.valor, 0);
+    document.getElementById('dash-analog').textContent = 'R$ ' + fmt(totA);
+    document.getElementById('dash-digital').textContent = 'R$ ' + fmt(totD);
+    document.getElementById('dash-total').textContent = 'R$ ' + fmt(totA + totD);
+    const recentes = window.trabalhos.slice(0, 5);
+    document.getElementById('recent-list').innerHTML = recentes.map(t => `
+        <div style="background:var(--surface); padding:15px; border-radius:10px; margin-bottom:10px; border:1px solid var(--border); display:flex; justify-content:space-between">
+            <span>${t.nome}</span> <b>R$ ${fmt(t.valor)}</b>
+        </div>
+    `).join('');
+}
+
+function updateBadges() {
+    document.getElementById('badge-trabalhos').textContent = `(${window.trabalhos.length})`;
+    document.getElementById('badge-clientes').textContent = `(${window.clientes.length})`;
+}
+
+// PDF EXPORT
+function exportPDF(clienteId) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const cli = window.clientes.find(c => c.id === clienteId);
+    const works = window.trabalhos.filter(t => t.clienteId === clienteId);
+    
+    doc.setFontSize(18); doc.text("Relatório de Cliente - LAB.STUDIO", 14, 20);
+    doc.setFontSize(12); doc.text(`Cliente: ${cli.nome}`, 14, 30);
+    doc.text(`Contato: ${cli.contato || '-'}`, 14, 35);
+    
+    const rows = works.map(t => [t.nome, t.tipo, `R$ ${fmt(t.valor)}`]);
+    doc.autoTable({ startY: 45, head: [['Trabalho', 'Tipo', 'Valor']], body: rows });
+    
+    const total = works.reduce((a, b) => a + b.valor, 0);
+    doc.text(`Total Acumulado: R$ ${fmt(total)}`, 14, doc.lastAutoTable.finalY + 10);
+    doc.save(`Relatorio_${cli.nome}.pdf`);
+}
+
+// BACKUP
+function exportarBackup() {
+    const dados = JSON.stringify({ trabalhos: window.trabalhos, clientes: window.clientes, servicos: window.servicos });
+    const blob = new Blob([dados], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `backup_lab_${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+
+function importarBackup(event) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const d = JSON.parse(e.target.result);
+        if(confirm('Importar dados?')) {
+            if(d.clientes) for(let c of d.clientes) await window._setDoc(window._userDoc('clientes', c.id), c);
+            if(d.servicos) for(let s of d.servicos) await window._setDoc(window._userDoc('servicos', s.id), s);
+            if(d.trabalhos) for(let t of d.trabalhos) await window._setDoc(window._userDoc('trabalhos', t.id), t);
+            alert('Sucesso!');
+        }
+    };
+    reader.readAsText(event.target.files[0]);
+}
+
+window.renderDashboard = renderDashboard; window.renderTrabalhos = renderTrabalhos;
+window.renderClientes = renderClientes; window.renderServicos = renderServicos;
+window.updateBadges = updateBadges;
+</script>
+</body>
+</html>
