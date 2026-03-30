@@ -21,48 +21,57 @@ const firebaseConfig = {
   appId: "1:100658301742:web:1dfaa150a468b0232cc8bf"
 };
 
-const AUTHORIZED_EMAIL = "antoniomarcio.tpd@gmail.com";
-
 const app      = initializeApp(firebaseConfig);
 const db       = getFirestore(app);
 const auth     = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// ── Expõe funções ao escopo global ──
+let unsubTrabalhos = null;
+let unsubClientes  = null;
+
+// ── Helpers para coleções do usuário logado ──
+function userCol(colName) {
+  return collection(db, 'usuarios', window._uid, colName);
+}
+function userDoc(colName, id) {
+  return doc(db, 'usuarios', window._uid, colName, id);
+}
+
+// ── Expõe ao escopo global ──
 window._db        = db;
-window._col       = collection;
-window._doc       = doc;
-window._setDoc    = setDoc;
-window._deleteDoc = deleteDoc;
 window._auth      = auth;
 window._signOut   = () => signOut(auth);
+window._setDoc    = setDoc;
+window._deleteDoc = deleteDoc;
+window._userDoc   = userDoc;
 
-// ── Login Google ──
+// ── Login Google — qualquer conta ──
 window.fazerLogin = async () => {
   try {
-    const result = await signInWithPopup(auth, provider);
-    const email  = result.user.email;
-    if (email !== AUTHORIZED_EMAIL) {
-      await signOut(auth);
-      document.getElementById('login-error').textContent = '⛔ Acesso negado. Use a conta autorizada.';
-    }
+    await signInWithPopup(auth, provider);
   } catch(e) {
     document.getElementById('login-error').textContent = 'Erro ao fazer login. Tente novamente.';
   }
 };
 
-// ── Observa estado de autenticação ──
+// ── Observa autenticação ──
 onAuthStateChanged(auth, user => {
-  if (user && user.email === AUTHORIZED_EMAIL) {
-    // Usuário autenticado — mostra o app
+  // Cancela listeners anteriores se existirem
+  if (unsubTrabalhos) { unsubTrabalhos(); unsubTrabalhos = null; }
+  if (unsubClientes)  { unsubClientes();  unsubClientes  = null; }
+  window._appReady = false;
+
+  if (user) {
+    window._uid = user.uid;
+
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-root').style.display   = 'block';
-    document.getElementById('sync-status').textContent  = '🟢 ' + user.displayName;
+    document.getElementById('sync-status').textContent  = '🟢 ' + (user.displayName || user.email);
     document.getElementById('sync-status').style.color  = 'var(--green)';
     document.getElementById('btn-logout').style.display = 'flex';
 
-    // Inicia listeners do Firestore
-    onSnapshot(collection(db, 'trabalhos'), snap => {
+    // Listeners nos dados do usuário específico
+    unsubTrabalhos = onSnapshot(userCol('trabalhos'), snap => {
       window.trabalhos = [];
       snap.forEach(d => window.trabalhos.push(d.data()));
       window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
@@ -71,7 +80,7 @@ onAuthStateChanged(auth, user => {
       }
     });
 
-    onSnapshot(collection(db, 'clientes'), snap => {
+    unsubClientes = onSnapshot(userCol('clientes'), snap => {
       window.clientes = [];
       snap.forEach(d => window.clientes.push(d.data()));
       if (window._appReady) {
@@ -84,7 +93,9 @@ onAuthStateChanged(auth, user => {
     window.updateBadges();
 
   } else {
-    // Não autenticado — mostra tela de login
+    window._uid = null;
+    window.trabalhos = [];
+    window.clientes  = [];
     document.getElementById('tela-login').style.display = 'flex';
     document.getElementById('app-root').style.display   = 'none';
     document.getElementById('btn-logout').style.display = 'none';
@@ -915,25 +926,25 @@ function uid() {
 
 async function saveTrabalhoFB(obj) {
   try {
-    await window._setDoc(window._doc(window._db, 'trabalhos', obj.id), obj);
+    await window._setDoc(window._userDoc('trabalhos', obj.id), obj);
   } catch(e) { console.error('Erro ao salvar trabalho:', e); alert('Erro ao salvar. Verifique a conexão.'); }
 }
 
 async function saveClienteFB(obj) {
   try {
-    await window._setDoc(window._doc(window._db, 'clientes', obj.id), obj);
+    await window._setDoc(window._userDoc('clientes', obj.id), obj);
   } catch(e) { console.error('Erro ao salvar cliente:', e); alert('Erro ao salvar. Verifique a conexão.'); }
 }
 
 async function deleteTrabalhoFB(id) {
   try {
-    await window._deleteDoc(window._doc(window._db, 'trabalhos', id));
+    await window._deleteDoc(window._userDoc('trabalhos', id));
   } catch(e) { console.error('Erro ao deletar:', e); }
 }
 
 async function deleteClienteFB(id) {
   try {
-    await window._deleteDoc(window._doc(window._db, 'clientes', id));
+    await window._deleteDoc(window._userDoc('clientes', id));
   } catch(e) { console.error('Erro ao deletar:', e); }
 }
 
