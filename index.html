@@ -1504,4 +1504,169 @@ function renderDashboard() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="status-badge ${t.status||'pendente'}" style="font-size:10px;padding:2px 7px">${statusLabel(t.status||'pendente')}</span>
-            <span class="val
+            <span class="val">R$ ${fmt(t.valor||0)}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function updateBadges() {
+  const bdgTrab = document.getElementById('badge-trabalhos');
+  const bdgCli = document.getElementById('badge-clientes');
+  if(bdgTrab) bdgTrab.textContent = window.trabalhos.length;
+  if(bdgCli) bdgCli.textContent  = window.clientes.length;
+  updateBadgePrecos();
+}
+
+function fmt(n) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function statusLabel(s) {
+  return { pendente: 'Pendente', andamento: 'Andamento', concluido: 'Concluído', pago: 'Pago ✓', cancelado: 'Cancelado' }[s] || s;
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) { closeModal(); closeClienteModal(); closePrecoModal(); } });
+});
+
+function pdfStr(str) {
+  return (str || '')
+    .replace(/ã/g,'a').replace(/Ã/g,'A').replace(/â/g,'a').replace(/Â/g,'A')
+    .replace(/á/g,'a').replace(/Á/g,'A').replace(/à/g,'a').replace(/À/g,'A')
+    .replace(/ê/g,'e').replace(/Ê/g,'E').replace(/é/g,'e').replace(/É/g,'E')
+    .replace(/è/g,'e').replace(/È/g,'E').replace(/í/g,'i').replace(/Í/g,'I')
+    .replace(/î/g,'i').replace(/Î/g,'I').replace(/ó/g,'o').replace(/Ó/g,'O')
+    .replace(/ô/g,'o').replace(/Ô/g,'O').replace(/õ/g,'o').replace(/Õ/g,'O')
+    .replace(/ú/g,'u').replace(/Ú/g,'U').replace(/û/g,'u').replace(/Û/g,'U')
+    .replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ç/g,'c').replace(/Ç/g,'C')
+    .replace(/ñ/g,'n').replace(/Ñ/g,'N').replace(/[✓✗]/g, '').replace(/[^\x00-\x7F]/g, '?');
+}
+
+function exportClientePDF(clienteId) {
+  const c = window.clientes.find(x => x.id === clienteId);
+  if (!c) return;
+  const hoje = new Date().toISOString().split('T')[0];
+  const primeiroDia = hoje.slice(0,7) + '-01';
+  const dataIni = prompt('Data inicial (AAAA-MM-DD):', primeiroDia);
+  if (!dataIni) return;
+  const dataFim = prompt('Data final (AAAA-MM-DD):', hoje);
+  if (!dataFim) return;
+
+  const { jsPDF } = window.jspdf;
+  const works = window.trabalhos.filter(t => t.clienteId === clienteId && t.data >= dataIni && t.data <= dataFim).sort((a,b) => (a.data||'').localeCompare(b.data||''));
+
+  const totAnalog  = works.filter(t=>t.tipo==='analog').reduce((s,t)=>s+(t.valor||0),0);
+  const totDigital = works.filter(t=>t.tipo==='digital').reduce((s,t)=>s+(t.valor||0),0);
+  const totPago    = works.filter(t=>t.status==='pago').reduce((s,t)=>s+(t.valor||0),0);
+  const totGeral   = totAnalog + totDigital;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, margin = 18;
+
+  doc.setFillColor(14, 14, 16); doc.rect(0, 0, W, 42, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(244, 161, 52); doc.text('LAB.STUDIO', margin, 16);
+  doc.setFontSize(9); doc.setTextColor(152, 152, 176); doc.text(pdfStr('Periodo: ' + formatDate(dataIni) + ' a ' + formatDate(dataFim)), margin, 23);
+  doc.setFontSize(8); doc.setTextColor(107, 107, 128); doc.text('Emitido em ' + new Date().toLocaleDateString('pt-BR'), W - margin, 16, { align: 'right' });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(232, 232, 240); doc.text(pdfStr(c.nome), margin, 34);
+
+  let infoY = 50; doc.setDrawColor(42, 42, 53); doc.setLineWidth(0.3);
+  doc.setFillColor(23, 23, 27); doc.roundedRect(margin, infoY - 6, W - margin*2, 28, 3, 3, 'FD');
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(107, 107, 128);
+  doc.text('CONTATO', margin + 6, infoY); doc.text('INSTAGRAM / REDE SOCIAL', margin + 70, infoY); doc.text('TOTAL DE TRABALHOS', margin + 140, infoY);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(232, 232, 240);
+  doc.text(pdfStr(c.contato || '-'), margin + 6, infoY + 8); doc.text(pdfStr(c.social || '-'), margin + 70, infoY + 8); doc.text(String(works.length), margin + 140, infoY + 8);
+  if (c.obs) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(152, 152, 176); doc.text(pdfStr('Obs: ' + c.obs), margin + 6, infoY + 17); }
+
+  infoY += 36; const boxW = (W - margin*2 - 8) / 3;
+  doc.setFillColor(30, 24, 14); doc.roundedRect(margin, infoY, boxW, 22, 2, 2, 'F'); doc.setDrawColor(244, 161, 52); doc.setLineWidth(0.4); doc.line(margin, infoY, margin + boxW, infoY);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(244, 161, 52); doc.text('ANALÓGICO / ACRÍLICO', margin + 4, infoY + 6); doc.setFontSize(11); doc.text('R$ ' + fmt(totAnalog), margin + 4, infoY + 15);
+  const dx = margin + boxW + 4; doc.setFillColor(14, 18, 28); doc.roundedRect(dx, infoY, boxW, 22, 2, 2, 'F'); doc.setDrawColor(59, 158, 255); doc.line(dx, infoY, dx + boxW, infoY);
+  doc.setFontSize(7); doc.setTextColor(59, 158, 255); doc.text('DIGITAL', dx + 4, infoY + 6); doc.setFontSize(11); doc.text('R$ ' + fmt(totDigital), dx + 4, infoY + 15);
+  const tx = dx + boxW + 4; doc.setFillColor(14, 22, 16); doc.roundedRect(tx, infoY, boxW, 22, 2, 2, 'F'); doc.setDrawColor(74, 222, 128); doc.line(tx, infoY, tx + boxW, infoY);
+  doc.setFontSize(7); doc.setTextColor(74, 222, 128); doc.text('TOTAL GERAL', tx + 4, infoY + 6); doc.setFontSize(11); doc.text('R$ ' + fmt(totGeral), tx + 4, infoY + 15);
+
+  infoY += 30; doc.setFillColor(14, 22, 16); doc.roundedRect(margin, infoY, W - margin*2, 14, 2, 2, 'F'); doc.setFontSize(8); doc.setTextColor(74, 222, 128);
+  doc.text('Pago: R$ ' + fmt(totPago) + '   |   A receber: R$ ' + fmt(totGeral - totPago), margin + 4, infoY + 9);
+
+  infoY += 20; doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(152, 152, 176); doc.text('TRABALHOS', margin, infoY); infoY += 4;
+  if (!works.length) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 107, 128); doc.text('Nenhum trabalho registrado.', margin, infoY + 8); }
+  else {
+    doc.autoTable({
+      startY: infoY, margin: { left: margin, right: margin }, head: [['#', 'Trabalho', 'Tipo', 'Status', 'Valor', 'Data']],
+      body: works.map((t, i) => [ String(i + 1).padStart(3, '0'), pdfStr((t.qtd && t.qtd > 1 ? t.qtd + 'x ' : '') + (t.nome||'') + (t.paciente ? '\nPaciente: ' + t.paciente : '')), t.tipo === 'analog' ? 'Analogico' : 'Digital', pdfStr(statusLabel(t.status)), 'R$ ' + fmt(t.valor||0), formatDate(t.data) ]),
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 4, textColor: [232, 232, 240], fillColor: [23, 23, 27], lineColor: [42, 42, 53], lineWidth: 0.2 },
+      headStyles: { fillColor: [30, 30, 36], textColor: [107, 107, 128], fontStyle: 'bold', fontSize: 7.5 }, alternateRowStyles: { fillColor: [20, 20, 24] }, columnStyles: { 0: { cellWidth: 10 }, 4: { fontStyle: 'bold', textColor: [74, 222, 128] } }
+    });
+  }
+  const pageH = doc.internal.pageSize.getHeight(); doc.setFillColor(14, 14, 16); doc.rect(0, pageH - 12, W, 12, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(107, 107, 128); doc.text('LAB.STUDIO - Sistema de Gestao', margin, pageH - 4); doc.text('Pagina 1', W - margin, pageH - 4, { align: 'right' });
+  doc.save('cliente_' + (c.nome||'').replace(/\s+/g, '_').toLowerCase() + '.pdf');
+}
+
+function exportarBackup() {
+  const blob = new Blob([JSON.stringify({ versao: '1.0', exportadoEm: new Date().toISOString(), trabalhos: window.trabalhos, clientes: window.clientes }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `lab_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`; a.click(); URL.revokeObjectURL(url);
+}
+
+function importarBackup(event) {
+  const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const dados = JSON.parse(e.target.result);
+      if (!dados.trabalhos || !dados.clientes) { alert('Arquivo inválido.'); return; }
+      if (!confirm(`Importar backup?\nOs dados atuais serão substituídos.`)) return;
+      document.getElementById('sync-status').textContent = '⏳ Importando...';
+      for (const c of dados.clientes) await saveClienteFB(c);
+      for (const t of dados.trabalhos) await saveTrabalhoFB(t);
+      document.getElementById('sync-status').textContent = '🟢 Conectado'; alert('Backup importado com sucesso!');
+    } catch(err) { alert('Erro ao ler o arquivo.'); } event.target.value = '';
+  }; reader.readAsText(file);
+}
+
+// Vinculando todas as funções ao Window explicitamente para garantir funcionamento no HTML
+window.switchTab = switchTab;
+window.setFilter = setFilter;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.selectType = selectType;
+window.calcValorDigital = calcValorDigital;
+window.saveTrabalho = saveTrabalho;
+window.deleteTrabalho = deleteTrabalho;
+window.openClienteModal = openClienteModal;
+window.closeClienteModal = closeClienteModal;
+window.saveCliente = saveCliente;
+window.deleteCliente = deleteCliente;
+window.exportClientePDF = exportClientePDF;
+window.exportarBackup = exportarBackup;
+window.importarBackup = importarBackup;
+window.renderTrabalhos = renderTrabalhos;
+window.renderClientes = renderClientes;
+window.renderDashboard = renderDashboard;
+window.updateBadges = updateBadges;
+window.openPrecoModal = openPrecoModal;
+window.closePrecoModal = closePrecoModal;
+window.savePreco = savePreco;
+window.deletePreco = deletePreco;
+window.renderPrecos = renderPrecos;
+window.aplicarPrecoTabela = aplicarPrecoTabela;
+window.popularSeletorPrecos = popularSeletorPrecos;
+window.updateBadgePrecos = updateBadgePrecos;
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'lab-studio-v1'; const ASSETS = ['./', './index.html'];
+    self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); self.skipWaiting(); });
+    self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
+    self.addEventListener('fetch', e => { if (e.request.method !== 'GET') return; e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });
+  `;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
+}
+</script>
+</body>
+</html>
