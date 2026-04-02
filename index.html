@@ -19,7 +19,7 @@
   %22theme_color%22:%22%230e0e10%22,
   %22icons%22:[{%22src%22:%22https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f3a8.png%22,%22sizes%22:%2272x72%22,%22type%22:%22image/png%22},{%22src%22:%22https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f3a8.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]
 }">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script type="module">
@@ -142,6 +142,9 @@ onAuthStateChanged(auth, user => {
     --green: #4ade80;
     --red: #f87171;
     --radius: 10px;
+    --font-body: 'DM Sans', sans-serif;
+    --font-display: 'Inter', sans-serif;
+    --font-mono: 'DM Mono', monospace;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -149,9 +152,11 @@ onAuthStateChanged(auth, user => {
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-body);
     min-height: 100vh;
     overflow-x: hidden;
+    font-size: 14px;
+    line-height: 1.5;
   }
 
   /* GRID NOISE TEXTURE */
@@ -178,9 +183,10 @@ onAuthStateChanged(auth, user => {
   }
 
   .logo {
-    font-size: 18px; font-weight: 800; letter-spacing: 0.12em;
+    font-size: 17px; font-weight: 800; letter-spacing: 0.08em;
     color: var(--text);
     display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-display);
   }
   .logo span { color: var(--accent-analog); }
   .logo-dot {
@@ -203,11 +209,11 @@ onAuthStateChanged(auth, user => {
     color: var(--text-dim);
     padding: 7px 14px;
     border-radius: var(--radius);
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 12px;
     cursor: pointer;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     transition: all .2s;
     display: flex; align-items: center; gap: 5px;
   }
@@ -221,11 +227,11 @@ onAuthStateChanged(auth, user => {
     border: none;
     padding: 8px 18px;
     border-radius: var(--radius);
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-body);
     font-weight: 700;
     font-size: 13px;
     cursor: pointer;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
     transition: all .2s;
     display: flex; align-items: center; gap: 6px;
   }
@@ -240,12 +246,13 @@ onAuthStateChanged(auth, user => {
   }
   .tab {
     padding: 10px 20px;
-    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
     color: var(--text-muted);
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: all .2s;
     display: flex; align-items: center; gap: 7px;
+    font-family: var(--font-body);
   }
   .tab:hover { color: var(--text-dim); }
   .tab.active { color: var(--text); border-color: var(--accent-analog); }
@@ -463,15 +470,16 @@ onAuthStateChanged(auth, user => {
   .form-group.full { grid-column: 1/-1; }
 
   label {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
     text-transform: uppercase; color: var(--text-muted);
+    font-family: var(--font-display);
   }
 
   input, select, textarea {
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
-    font-family: 'DM Mono', monospace; font-size: 13px;
+    font-family: var(--font-body); font-size: 14px;
     padding: 9px 12px; border-radius: 7px;
     outline: none; transition: border-color .2s;
     width: 100%;
@@ -499,14 +507,14 @@ onAuthStateChanged(auth, user => {
   .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
   .btn-cancel {
     background: none; border: 1px solid var(--border);
-    color: var(--text-muted); font-family: 'Syne', sans-serif; font-weight: 600;
+    color: var(--text-muted); font-family: var(--font-body); font-weight: 600;
     font-size: 13px; padding: 9px 20px; border-radius: var(--radius);
     cursor: pointer; transition: all .15s;
   }
   .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
   .btn-save {
     background: var(--accent-analog); color: #000;
-    border: none; font-family: 'Syne', sans-serif; font-weight: 700;
+    border: none; font-family: var(--font-body); font-weight: 700;
     font-size: 13px; padding: 9px 24px; border-radius: var(--radius);
     cursor: pointer; transition: all .15s;
   }
@@ -599,6 +607,67 @@ onAuthStateChanged(auth, user => {
     .dual-col { grid-template-columns: 1fr; }
     .modal { padding: 20px 16px; width: 100%; max-width: 100%; margin: 0; border-radius: 16px 16px 0 0; max-height: 92vh; }
     .modal-overlay { align-items: flex-end; }
+  }
+
+  /* Cards de trabalho por cliente */
+  .cliente-grupo { margin-bottom: 24px; }
+  .cliente-grupo-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cliente-grupo-nome {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    font-family: var(--font-display);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cliente-grupo-total {
+    font-family: var(--font-mono); font-size: 13px;
+    color: var(--text-muted);
+  }
+  .trabalho-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .trabalho-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    transition: border-color .2s, transform .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .trabalho-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .trabalho-card.analog::before { background: var(--accent-analog); }
+  .trabalho-card.digital::before { background: var(--accent-digital); }
+  .trabalho-card:hover { border-color: var(--text-muted); transform: translateY(-1px); }
+  .trabalho-card-nome {
+    font-size: 14px; font-weight: 600; margin-bottom: 4px;
+    font-family: var(--font-display);
+  }
+  .trabalho-card-paciente {
+    font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
+  }
+  .trabalho-card-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 8px;
+  }
+  .trabalho-card-valor {
+    font-family: var(--font-mono); font-size: 16px; font-weight: 600;
+    color: var(--green);
+  }
+  .trabalho-card-data {
+    font-size: 11px; color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+  .trabalho-card-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+    padding-top: 10px; border-top: 1px solid var(--border);
   }
 
   /* Tabela de preços */
@@ -834,25 +903,7 @@ onAuthStateChanged(auth, user => {
       <input type="month" id="f-mes" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;border-radius:6px;outline:none;" onchange="renderTrabalhos()" title="Filtrar por mês">
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Trabalho</th>
-            <th>Tipo</th>
-            <th>Status</th>
-            <th>Valor</th>
-            <th>Data</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-trabalhos">
-          <tr><td colspan="8"><div class="empty"><div class="empty-icon">🖌️</div>Nenhum trabalho cadastrado</div></td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div id="trabalhos-cards-container"></div>
   </div>
 
   <!-- ── CLIENTES ── -->
@@ -886,6 +937,10 @@ onAuthStateChanged(auth, user => {
   <div class="page" id="page-precos">
     <div class="filters">
       <input class="search-input" type="text" placeholder="Buscar serviço..." id="search-precos" oninput="renderPrecos()">
+      <select id="filtro-cliente-preco" onchange="renderPrecos()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:6px 12px;border-radius:6px;outline:none;">
+        <option value="">Todos</option>
+        <option value="padrao">Tabela Padrão</option>
+      </select>
       <button class="btn-add" onclick="openPrecoModal()" style="margin-left:auto">+ Novo Preço</button>
     </div>
     <div id="preco-grid-container">
@@ -1037,6 +1092,12 @@ onAuthStateChanged(auth, user => {
         <input type="number" id="pr-valor" placeholder="0,00" step="0.01" min="0">
       </div>
       <div class="form-group full">
+        <label>Cliente (deixe vazio para tabela padrão)</label>
+        <select id="pr-cliente">
+          <option value="">— Tabela Padrão (todos) —</option>
+        </select>
+      </div>
+      <div class="form-group full">
         <label>Observações</label>
         <input type="text" id="pr-obs" placeholder="Ex: tamanho, complexidade...">
       </div>
@@ -1116,12 +1177,18 @@ function switchTab(tab) {
 // ─── MODAL PREÇO ─────────────────────────────────────
 function openPrecoModal(id) {
   document.getElementById('modal-preco').classList.add('open');
+  // popular dropdown de clientes
+  const sel = document.getElementById('pr-cliente');
+  sel.innerHTML = '<option value="">— Tabela Padrão (todos) —</option>';
+  clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
+
   if (!id) {
     document.getElementById('pr-id').value    = '';
     document.getElementById('pr-nome').value  = '';
     document.getElementById('pr-valor').value = '';
     document.getElementById('pr-obs').value   = '';
     document.getElementById('pr-tipo').value  = 'analog';
+    document.getElementById('pr-cliente').value = '';
     document.getElementById('preco-modal-title').textContent = 'Novo Preço';
   } else {
     const p = precos.find(x => x.id === id);
@@ -1131,6 +1198,7 @@ function openPrecoModal(id) {
     document.getElementById('pr-valor').value = p.valor;
     document.getElementById('pr-obs').value   = p.obs || '';
     document.getElementById('pr-tipo').value  = p.tipo;
+    document.getElementById('pr-cliente').value = p.clienteId || '';
     document.getElementById('preco-modal-title').textContent = 'Editar Preço';
   }
 }
@@ -1384,12 +1452,12 @@ async function deleteCliente(id) {
 // ─── RENDER TRABALHOS ────────────────────────────────
 function renderTrabalhos() {
   const q   = (document.getElementById('search-trabalhos').value || '').toLowerCase();
-  const tbody = document.getElementById('tbody-trabalhos');
+  const container = document.getElementById('trabalhos-cards-container');
 
   let list = trabalhos.filter(t => {
     const c = clientes.find(x => x.id === t.clienteId);
     const cNome = c ? c.nome.toLowerCase() : '';
-    const matchQ = !q || t.nome.toLowerCase().includes(q) || cNome.includes(q);
+    const matchQ = !q || t.nome.toLowerCase().includes(q) || cNome.includes(q) || (t.paciente||'').toLowerCase().includes(q);
     const mesFiltro = document.getElementById('f-mes')?.value || '';
     const matchMes  = !mesFiltro || (t.data && t.data.slice(0,7) === mesFiltro);
     let matchF = true;
@@ -1410,30 +1478,77 @@ function renderTrabalhos() {
   document.getElementById('t-total').textContent   = 'R$ ' + fmt(tAnalog + tDigital);
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-icon">🖌️</div>Nenhum trabalho encontrado</div></td></tr>`;
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🖌️</div>Nenhum trabalho encontrado</div>';
     return;
   }
 
-  tbody.innerHTML = list.map((t,i) => {
-    const c = clientes.find(x => x.id === t.clienteId);
-    const elemInfo = t.tipo === 'digital' && t.elementos ? `<br><span style="font-size:11px;color:var(--accent-digital)">${t.elementos} elem.</span>` : '';
-    return `<tr>
-      <td><span class="client-id">#${String(list.length - i).padStart(3,'0')}</span></td>
-      <td><span class="client-name">${c ? c.nome : '<span style="color:var(--text-muted)">—</span>'}</span></td>
-      <td>
-        ${t.nome}
-        ${t.paciente ? `<br><span style="font-size:11px;color:var(--text-muted)">Paciente: ${t.paciente}</span>` : ''}
-      </td>
-      <td><span class="type-badge ${t.tipo}"><span class="dot"></span>${t.tipo==='analog'?'Analógico':'Digital'}</span>${elemInfo}</td>
-      <td><span class="status-badge ${t.status}">${statusLabel(t.status)}</span></td>
-      <td><span class="money-cell">${fmt(t.valor)}</span></td>
-      <td style="font-size:12px;color:var(--text-muted)">${formatDate(t.data)}</td>
-      <td>
-        <button class="action-btn" onclick="openModal('${t.id}')">✎</button>
-        <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
+  // Agrupar por cliente
+  const grupos = {};
+  const semCliente = [];
+  list.forEach(t => {
+    if (t.clienteId) {
+      if (!grupos[t.clienteId]) grupos[t.clienteId] = [];
+      grupos[t.clienteId].push(t);
+    } else {
+      semCliente.push(t);
+    }
+  });
+
+  let html = '';
+
+  // Renderiza grupo de cada cliente
+  const renderGrupo = (nomeGrupo, trabalhosList) => {
+    const totalGrupo = trabalhosList.reduce((s,t)=>s+t.valor,0);
+    const cards = trabalhosList.map(t => {
+      const elemInfo = t.tipo === 'digital' && t.elementos
+        ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
+        : '';
+      return `<div class="trabalho-card ${t.tipo}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div class="trabalho-card-nome">${t.nome}</div>
+            ${t.paciente ? `<div class="trabalho-card-paciente">Paciente: ${t.paciente}</div>` : ''}
+          </div>
+          <span class="status-badge ${t.status}" style="white-space:nowrap;font-size:10px">${statusLabel(t.status)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 7px">${t.tipo==='analog'?'Analógico':'Digital'}</span>
+          ${elemInfo}
+        </div>
+        <div class="trabalho-card-row">
+          <span class="trabalho-card-valor">R$ ${fmt(t.valor)}</span>
+          <span class="trabalho-card-data">${formatDate(t.data)}</span>
+        </div>
+        <div class="trabalho-card-actions">
+          <button class="action-btn" onclick="openModal('${t.id}')" style="flex:1;text-align:center">✎ Editar</button>
+          <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="cliente-grupo">
+      <div class="cliente-grupo-header">
+        <div class="cliente-grupo-nome">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
+          ${nomeGrupo}
+          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosList.length})</span>
+        </div>
+        <span class="cliente-grupo-total">R$ ${fmt(totalGrupo)}</span>
+      </div>
+      <div class="trabalho-cards-grid">${cards}</div>
+    </div>`;
+  };
+
+  // Clientes com trabalhos
+  Object.keys(grupos).forEach(cid => {
+    const c = clientes.find(x => x.id === cid);
+    html += renderGrupo(c ? c.nome : 'Cliente removido', grupos[cid]);
+  });
+
+  // Sem cliente
+  if (semCliente.length) html += renderGrupo('Sem cliente', semCliente);
+
+  container.innerHTML = html;
 }
 
 // ─── RENDER CLIENTES ─────────────────────────────────
