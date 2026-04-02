@@ -601,129 +601,6 @@ onAuthStateChanged(auth, user => {
     .modal-overlay { align-items: flex-end; }
   }
 
-  /* ── MODAL TABS ── */
-  .modal-tabs {
-    display: flex; gap: 0;
-    border: 1px solid var(--border);
-    border-radius: 8px; overflow: hidden;
-  }
-  .modal-tab {
-    flex: 1; padding: 10px 16px;
-    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    cursor: pointer; transition: all .18s;
-    color: var(--text-muted); background: var(--surface2);
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    border: none;
-  }
-  .modal-tab:first-child { border-right: 1px solid var(--border); }
-  .modal-tab.active.analog-tab { background: var(--accent-analog-dim); color: var(--accent-analog); }
-  .modal-tab.active.digital-tab { background: var(--accent-digital-dim); color: var(--accent-digital); }
-  .modal-tab:not(.active):hover { background: var(--surface); color: var(--text-dim); }
-
-  .modal-tab-badge {
-    background: rgba(255,255,255,0.08);
-    padding: 1px 7px; border-radius: 20px;
-    font-size: 11px; min-width: 20px; text-align: center;
-  }
-  .modal-tab.active .modal-tab-badge { background: rgba(255,255,255,0.15); }
-
-  .modal-tab-panel { display: none; margin-top: 0; }
-  .modal-tab-panel.active { display: block; }
-
-  /* Seletor de preços dropdown */
-  .preco-select-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 0 8px;
-  }
-  .preco-select-row label {
-    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--text-muted);
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .preco-select-row select {
-    flex: 1; padding: 7px 10px; font-size: 12px;
-  }
-
-  /* Col headers */
-  .items-col-headers {
-    display: grid;
-    grid-template-columns: 1fr 70px 90px 90px 32px;
-    gap: 8px; padding: 5px 10px 4px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-  }
-  .items-col-headers span {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--text-muted);
-  }
-  .items-col-headers span:nth-child(2),
-  .items-col-headers span:nth-child(3),
-  .items-col-headers span:nth-child(4) { text-align: right; }
-
-  .items-list {
-    border: 1px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-    min-height: 42px;
-  }
-
-  .item-row {
-    display: grid;
-    grid-template-columns: 1fr 70px 90px 90px 32px;
-    gap: 8px; align-items: center;
-    padding: 8px 10px;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .item-row:first-child { border-top: none; }
-  .item-row input { padding: 6px 8px; font-size: 12px; }
-  .item-row input[type="number"] { text-align: right; }
-
-  .item-qty-wrap {
-    display: flex; align-items: center;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 7px; overflow: hidden;
-  }
-  .item-qty-btn {
-    background: none; border: none; color: var(--text-muted);
-    width: 22px; height: 30px; cursor: pointer; font-size: 15px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all .15s; flex-shrink: 0; font-family: monospace;
-  }
-  .item-qty-btn:hover { background: var(--border); color: var(--text); }
-  .item-qty-input {
-    border: none !important; background: transparent !important;
-    text-align: center; width: 26px; padding: 4px 2px !important;
-    font-size: 13px; font-weight: 700; color: var(--text) !important;
-  }
-
-  .item-delete-btn {
-    background: none; border: 1px solid var(--border); color: var(--text-muted);
-    width: 28px; height: 28px; border-radius: 5px; cursor: pointer;
-    font-size: 12px; display: flex; align-items: center; justify-content: center;
-    transition: all .15s; flex-shrink: 0;
-  }
-  .item-delete-btn:hover { border-color: var(--red); color: var(--red); background: rgba(248,113,113,0.05); }
-
-  .items-list-empty {
-    padding: 14px 12px; font-size: 12px; color: var(--text-muted); font-style: italic;
-  }
-
-  .btn-add-item-full {
-    width: 100%; margin-top: 8px;
-    background: none; border: 1px dashed var(--border);
-    border-radius: 7px; padding: 8px;
-    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
-    letter-spacing: 0.05em; cursor: pointer; transition: all .15s;
-    color: var(--text-muted);
-  }
-  .btn-add-item-full.analog:hover { border-color: var(--accent-analog); color: var(--accent-analog); background: var(--accent-analog-dim); }
-  .btn-add-item-full.digital:hover { border-color: var(--accent-digital); color: var(--accent-digital); background: var(--accent-digital-dim); }
-
   /* Tabela de preços */
   .preco-grid {
     display: grid;
@@ -1020,23 +897,63 @@ onAuthStateChanged(auth, user => {
 
 <!-- ── MODAL TRABALHO ── -->
 <div class="modal-overlay" id="modal-trabalho">
-  <div class="modal" style="width:600px">
+  <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
     <div class="modal-title">
       <span id="modal-title-text">🖌️ Novo Trabalho</span>
     </div>
     <input type="hidden" id="edit-id">
-
-    <!-- Campos gerais -->
     <div class="form-grid">
+
+      <div class="form-group full">
+        <label>Tipo de Trabalho</label>
+        <div class="type-toggle">
+          <div class="type-option selected analog" onclick="selectType('analog')" id="opt-analog">⬡ Analógico / Acrílico</div>
+          <div class="type-option" onclick="selectType('digital')" id="opt-digital">◈ Digital</div>
+        </div>
+        <input type="hidden" id="f-tipo" value="analog">
+      </div>
+
       <div class="form-group">
         <label>Cliente</label>
-        <select id="f-cliente"><option value="">— Selecionar —</option></select>
+        <select id="f-cliente">
+          <option value="">— Selecionar —</option>
+        </select>
       </div>
+
       <div class="form-group">
         <label>Nome do Paciente</label>
         <input type="text" id="f-paciente" placeholder="Ex: Maria Silva">
       </div>
+
+      <div class="form-group full">
+        <label>Tabela de Preços (opcional)</label>
+        <select id="f-preco-sel" onchange="aplicarPrecoTabela()">
+          <option value="">— Selecionar da tabela —</option>
+        </select>
+      </div>
+
+      <div class="form-group full">
+        <label>Trabalho</label>
+        <input type="text" id="f-nome" placeholder="Ex: Retrato A4 acrílico, Logo digital...">
+      </div>
+
+      <!-- Campos exclusivos digital -->
+      <div class="form-group" id="grupo-elementos" style="display:none">
+        <label>Qtd. de Elementos</label>
+        <input type="number" id="f-elementos" placeholder="0" min="0" step="1" oninput="calcValorDigital()">
+      </div>
+
+      <div class="form-group" id="grupo-valor-elemento" style="display:none">
+        <label>Valor por Elemento (R$)</label>
+        <input type="number" id="f-valor-elemento" placeholder="0,00" step="0.01" min="0" oninput="calcValorDigital()">
+      </div>
+
+      <div class="form-group" id="grupo-valor-label">
+        <label>Valor Total (R$)</label>
+        <input type="number" id="f-valor" placeholder="0,00" step="0.01" min="0">
+      </div>
+
       <div class="form-group">
         <label>Status</label>
         <select id="f-status">
@@ -1047,85 +964,18 @@ onAuthStateChanged(auth, user => {
           <option value="cancelado">Cancelado</option>
         </select>
       </div>
+
       <div class="form-group">
         <label>Data</label>
         <input type="date" id="f-data">
       </div>
-    </div>
 
-    <!-- Abas Analógico / Digital -->
-    <div class="modal-tabs" style="margin-top:18px">
-      <div class="modal-tab active analog-tab" id="mtab-analog" onclick="switchModalTab('analog')">
-        ⬡ Analógico / Acrílico
-        <span class="modal-tab-badge" id="mtab-badge-analog">0</span>
-      </div>
-      <div class="modal-tab digital-tab" id="mtab-digital" onclick="switchModalTab('digital')">
-        ◈ Digital
-        <span class="modal-tab-badge" id="mtab-badge-digital">0</span>
-      </div>
-    </div>
-
-    <!-- Painel Analógico -->
-    <div class="modal-tab-panel active" id="mpanel-analog">
-      <!-- Seletor de tabela de preços (analógico) -->
-      <div class="preco-select-row">
-        <label>Da tabela de preços:</label>
-        <select id="preco-sel-analog" onchange="aplicarPrecoSelect('analog')">
-          <option value="">— Selecionar serviço —</option>
-        </select>
-      </div>
-      <div class="items-col-headers">
-        <span>Trabalho</span><span>Qtd</span><span>Vlr Unit (R$)</span><span>Subtotal</span><span></span>
-      </div>
-      <div class="items-list" id="items-analog">
-        <div class="items-list-empty">Clique em "+ item" para adicionar.</div>
-      </div>
-      <button type="button" class="btn-add-item-full analog" onclick="addItemRow('analog')">+ Adicionar item analógico</button>
-    </div>
-
-    <!-- Painel Digital -->
-    <div class="modal-tab-panel" id="mpanel-digital">
-      <!-- Seletor de tabela de preços (digital) -->
-      <div class="preco-select-row">
-        <label>Da tabela de preços:</label>
-        <select id="preco-sel-digital" onchange="aplicarPrecoSelect('digital')">
-          <option value="">— Selecionar serviço —</option>
-        </select>
-      </div>
-      <div class="items-col-headers">
-        <span>Trabalho</span><span>Qtd</span><span>Vlr Unit (R$)</span><span>Subtotal</span><span></span>
-      </div>
-      <div class="items-list" id="items-digital">
-        <div class="items-list-empty">Clique em "+ item" para adicionar.</div>
-      </div>
-      <button type="button" class="btn-add-item-full digital" onclick="addItemRow('digital')">+ Adicionar item digital</button>
-    </div>
-
-    <!-- Totais por tipo + geral -->
-    <div id="modal-total-bar" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr">
-        <div style="padding:10px 14px;border-right:1px solid var(--border)">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--accent-analog);text-transform:uppercase;margin-bottom:2px">Analógico</div>
-          <div id="modal-total-analog" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--accent-analog)">R$ 0,00</div>
-        </div>
-        <div style="padding:10px 14px;border-right:1px solid var(--border)">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--accent-digital);text-transform:uppercase;margin-bottom:2px">Digital</div>
-          <div id="modal-total-digital" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--accent-digital)">R$ 0,00</div>
-        </div>
-        <div style="padding:10px 14px;background:rgba(74,222,128,0.04)">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--green);text-transform:uppercase;margin-bottom:2px">Total Geral</div>
-          <div id="modal-total-val" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--green)">R$ 0,00</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-grid" style="margin-top:14px">
       <div class="form-group full">
         <label>Descrição / Observações</label>
         <textarea id="f-desc" placeholder="Dimensões, referências, detalhes do pedido..."></textarea>
       </div>
-    </div>
 
+    </div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-save" onclick="saveTrabalho()">Salvar</button>
@@ -1177,7 +1027,7 @@ onAuthStateChanged(auth, user => {
       </div>
       <div class="form-group">
         <label>Tipo</label>
-        <select id="pr-tipo" onchange="toggleContaElemento()">
+        <select id="pr-tipo">
           <option value="analog">Analógico / Acrílico</option>
           <option value="digital">Digital</option>
         </select>
@@ -1189,16 +1039,6 @@ onAuthStateChanged(auth, user => {
       <div class="form-group full">
         <label>Observações</label>
         <input type="text" id="pr-obs" placeholder="Ex: tamanho, complexidade...">
-      </div>
-      <!-- Só aparece para tipo Digital -->
-      <div class="form-group full" id="grupo-conta-elemento" style="display:none">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:13px;letter-spacing:0;font-weight:600;color:var(--text)">
-          <input type="checkbox" id="pr-conta-elemento" style="width:16px;height:16px;accent-color:var(--accent-digital);cursor:pointer">
-          Conta como elemento desenhado
-        </label>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;padding-left:26px">
-          Marque se este item deve ser somado ao contador de elementos no dashboard. Deixe desmarcado para finalizações, modelos impressos, etc.
-        </div>
       </div>
     </div>
     <div class="form-actions">
@@ -1274,12 +1114,6 @@ function switchTab(tab) {
 }
 
 // ─── MODAL PREÇO ─────────────────────────────────────
-function toggleContaElemento() {
-  const tipo = document.getElementById('pr-tipo').value;
-  document.getElementById('grupo-conta-elemento').style.display = tipo === 'digital' ? '' : 'none';
-  if (tipo !== 'digital') document.getElementById('pr-conta-elemento').checked = false;
-}
-
 function openPrecoModal(id) {
   document.getElementById('modal-preco').classList.add('open');
   if (!id) {
@@ -1288,7 +1122,6 @@ function openPrecoModal(id) {
     document.getElementById('pr-valor').value = '';
     document.getElementById('pr-obs').value   = '';
     document.getElementById('pr-tipo').value  = 'analog';
-    document.getElementById('pr-conta-elemento').checked = false;
     document.getElementById('preco-modal-title').textContent = 'Novo Preço';
   } else {
     const p = precos.find(x => x.id === id);
@@ -1298,10 +1131,8 @@ function openPrecoModal(id) {
     document.getElementById('pr-valor').value = p.valor;
     document.getElementById('pr-obs').value   = p.obs || '';
     document.getElementById('pr-tipo').value  = p.tipo;
-    document.getElementById('pr-conta-elemento').checked = !!p.contaElemento;
     document.getElementById('preco-modal-title').textContent = 'Editar Preço';
   }
-  toggleContaElemento();
 }
 
 function closePrecoModal() {
@@ -1313,12 +1144,11 @@ async function savePreco() {
   const valor = parseFloat(document.getElementById('pr-valor').value) || 0;
   const tipo  = document.getElementById('pr-tipo').value;
   const obs   = document.getElementById('pr-obs').value.trim();
-  const contaElemento = tipo === 'digital' && document.getElementById('pr-conta-elemento').checked;
   const editId = document.getElementById('pr-id').value;
   if (!nome) { alert('Informe o nome do serviço.'); return; }
   const obj = editId
-    ? { ...(precos.find(x=>x.id===editId)||{}), id: editId, nome, valor, tipo, obs, contaElemento }
-    : { id: uid(), nome, valor, tipo, obs, contaElemento };
+    ? { ...(precos.find(x=>x.id===editId)||{}), id: editId, nome, valor, tipo, obs }
+    : { id: uid(), nome, valor, tipo, obs };
   await savePrecoFB(obj);
   closePrecoModal();
 }
@@ -1340,11 +1170,7 @@ function renderPrecos() {
     <div class="preco-card">
       <div class="preco-card-info">
         <span class="preco-card-nome">${p.nome}</span>
-        <span class="preco-card-tipo">
-          <span class="type-badge ${p.tipo}" style="font-size:10px;padding:2px 7px">${p.tipo==='analog'?'Analógico':'Digital'}</span>
-          ${p.tipo==='digital' && p.contaElemento ? '<span style="font-size:10px;color:var(--accent-digital);margin-left:4px">✦ elemento</span>' : ''}
-          ${p.obs?` · ${p.obs}`:''}
-        </span>
+        <span class="preco-card-tipo"><span class="type-badge ${p.tipo}" style="font-size:10px;padding:2px 7px">${p.tipo==='analog'?'Analógico':'Digital'}</span>${p.obs?` · ${p.obs}`:''}</span>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <span class="preco-card-val">R$ ${fmt(p.valor)}</span>
@@ -1394,162 +1220,6 @@ function setFilter(f) {
   renderTrabalhos();
 }
 
-// ─── MULTI-ITEM TABBED MODAL ─────────────────────────
-let itemRowCounter = 0;
-let activeModalTab = 'analog';
-
-function switchModalTab(tipo) {
-  activeModalTab = tipo;
-  ['analog','digital'].forEach(t => {
-    document.getElementById('mtab-' + t).classList.toggle('active', t === tipo);
-    document.getElementById('mpanel-' + t).classList.toggle('active', t === tipo);
-  });
-}
-
-function popularPrecosSelects() {
-  ['analog','digital'].forEach(tipo => {
-    const sel = document.getElementById('preco-sel-' + tipo);
-    if (!sel) return;
-    const lista = (window.precos || []).filter(p => p.tipo === tipo);
-    sel.innerHTML = '<option value="">— Selecionar serviço —</option>';
-    lista.forEach(p => {
-      const elementoTag = (tipo === 'digital' && p.contaElemento) ? ' ✦' : '';
-      sel.innerHTML += `<option value="${p.id}">${p.nome} — R$ ${fmt(p.valor)}${elementoTag}</option>`;
-    });
-  });
-}
-
-function aplicarPrecoSelect(tipo) {
-  const sel = document.getElementById('preco-sel-' + tipo);
-  const id = sel.value;
-  if (!id) return;
-  const p = (window.precos || []).find(x => x.id === id);
-  if (!p) return;
-  addItemRow(tipo, { nome: p.nome, qtd: 1, valorUnit: p.valor, subtotal: p.valor, precoId: p.id, contaElemento: !!p.contaElemento });
-  // Reset select after adding
-  sel.value = '';
-}
-
-function addItemRow(tipo, item) {
-  const listEl = document.getElementById('items-' + tipo);
-  const emptyEl = listEl.querySelector('.items-list-empty');
-  if (emptyEl) emptyEl.remove();
-
-  const rowId = ++itemRowCounter;
-  const nome  = item ? (item.nome || '') : '';
-  const qty   = item ? (item.qtd || 1) : 1;
-  const vunit = item ? (item.valorUnit != null ? item.valorUnit : '') : '';
-  const sub   = (qty && vunit !== '') ? (qty * parseFloat(vunit)).toFixed(2) : '';
-  const contaElemento = item ? (!!item.contaElemento) : false;
-
-  const row = document.createElement('div');
-  row.className = 'item-row';
-  row.dataset.tipo = tipo;
-  row.dataset.rowId = rowId;
-  row.dataset.contaElemento = contaElemento ? '1' : '0';
-  row.innerHTML = `
-    <input type="text" placeholder="Nome do trabalho..." value="${escHtml(nome)}" oninput="recalcTotals()" data-field="nome">
-    <div class="item-qty-wrap">
-      <button type="button" class="item-qty-btn" onclick="changeQty(${rowId},-1)">−</button>
-      <input class="item-qty-input" type="number" min="1" step="1" value="${qty}" oninput="recalcTotals()" data-field="qtd">
-      <button type="button" class="item-qty-btn" onclick="changeQty(${rowId},1)">+</button>
-    </div>
-    <input type="number" placeholder="0,00" step="0.01" min="0" value="${vunit}" oninput="recalcTotals()" data-field="valorUnit">
-    <input type="number" placeholder="—" step="0.01" min="0" value="${sub}" oninput="onSubtotalEdit(${rowId})" data-field="subtotal" style="color:var(--green);font-weight:600">
-    <button type="button" class="item-delete-btn" onclick="removeItemRow(${rowId})">✕</button>
-  `;
-  listEl.appendChild(row);
-  updateTabBadge(tipo);
-  recalcTotals();
-}
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-}
-
-function changeQty(rowId, delta) {
-  const row = document.querySelector(`[data-row-id="${rowId}"]`);
-  if (!row) return;
-  const qtyInput = row.querySelector('[data-field="qtd"]');
-  let val = parseInt(qtyInput.value) || 1;
-  val = Math.max(1, val + delta);
-  qtyInput.value = val;
-  recalcTotals();
-}
-
-function onSubtotalEdit(rowId) {
-  const row = document.querySelector(`[data-row-id="${rowId}"]`);
-  if (!row) return;
-  const qty = parseFloat(row.querySelector('[data-field="qtd"]').value) || 1;
-  const sub = parseFloat(row.querySelector('[data-field="subtotal"]').value) || 0;
-  if (qty > 0 && sub > 0) {
-    row.querySelector('[data-field="valorUnit"]').value = (sub / qty).toFixed(2);
-  }
-  recalcTotals();
-}
-
-function removeItemRow(rowId) {
-  const row = document.querySelector(`[data-row-id="${rowId}"]`);
-  if (!row) return;
-  const tipo = row.dataset.tipo;
-  const listEl = document.getElementById('items-' + tipo);
-  row.remove();
-  if (listEl.querySelectorAll('.item-row').length === 0) {
-    listEl.innerHTML = '<div class="items-list-empty">Clique em "+ item" para adicionar.</div>';
-  }
-  updateTabBadge(tipo);
-  recalcTotals();
-}
-
-function updateTabBadge(tipo) {
-  const count = document.querySelectorAll(`.item-row[data-tipo="${tipo}"]`).length;
-  const badge = document.getElementById('mtab-badge-' + tipo);
-  if (badge) badge.textContent = count;
-}
-
-function recalcTotals() {
-  let totalAnalog = 0, totalDigital = 0;
-  document.querySelectorAll('.item-row').forEach(row => {
-    const tipo  = row.dataset.tipo;
-    const qty   = parseFloat(row.querySelector('[data-field="qtd"]').value) || 1;
-    const vunit = parseFloat(row.querySelector('[data-field="valorUnit"]').value) || 0;
-    const sub   = qty * vunit;
-    const subField = row.querySelector('[data-field="subtotal"]');
-    if (document.activeElement !== subField) {
-      subField.value = sub > 0 ? sub.toFixed(2) : '';
-    }
-    if (tipo === 'analog') totalAnalog += sub;
-    else totalDigital += sub;
-  });
-  const total = totalAnalog + totalDigital;
-  const bar = document.getElementById('modal-total-bar');
-  if (bar) {
-    bar.style.display = total > 0 ? 'block' : 'none';
-    document.getElementById('modal-total-analog').textContent  = 'R$ ' + fmt(totalAnalog);
-    document.getElementById('modal-total-digital').textContent = 'R$ ' + fmt(totalDigital);
-    document.getElementById('modal-total-val').textContent     = 'R$ ' + fmt(total);
-  }
-}
-
-function getItemsFromModal(tipo) {
-  const rows = document.querySelectorAll(`.item-row[data-tipo="${tipo}"]`);
-  const items = [];
-  rows.forEach(row => {
-    const nome  = row.querySelector('[data-field="nome"]').value.trim();
-    const qty   = parseFloat(row.querySelector('[data-field="qtd"]').value) || 1;
-    const vunit = parseFloat(row.querySelector('[data-field="valorUnit"]').value) || 0;
-    const contaElemento = row.dataset.contaElemento === '1';
-    if (nome || vunit > 0) items.push({ nome, qtd: qty, valorUnit: vunit, subtotal: qty * vunit, contaElemento });
-  });
-  return items;
-}
-
-function clearItemsList(tipo) {
-  const listEl = document.getElementById('items-' + tipo);
-  listEl.innerHTML = '<div class="items-list-empty">Clique em "+ item" para adicionar.</div>';
-  updateTabBadge(tipo);
-}
-
 // ─── MODAL TRABALHO ───────────────────────────────────
 function openModal(id) {
   editingTrabalhoId = id || null;
@@ -1563,42 +1233,38 @@ function openModal(id) {
     sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
   });
 
-  // reset item lists & start on analog tab
-  clearItemsList('analog');
-  clearItemsList('digital');
-  switchModalTab('analog');
-  popularPrecosSelects();
+  // popular seletor de preços
+  popularSeletorPrecos();
 
+  // default date
   if (!id) {
     document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
     document.getElementById('modal-title-text').textContent = '🖌️ Novo Trabalho';
     document.getElementById('edit-id').value = '';
+    selectType('analog');
+    document.getElementById('f-nome').value = '';
     document.getElementById('f-paciente').value = '';
+    document.getElementById('f-valor').value = '';
+    document.getElementById('f-elementos').value = '';
+    document.getElementById('f-valor-elemento').value = '';
     document.getElementById('f-status').value = 'pendente';
     document.getElementById('f-desc').value = '';
     document.getElementById('f-cliente').value = '';
-    recalcTotals();
   } else {
     const t = trabalhos.find(x => x.id === id);
     if (!t) return;
     document.getElementById('modal-title-text').textContent = '✏️ Editar Trabalho';
     document.getElementById('edit-id').value = t.id;
+    selectType(t.tipo);
+    document.getElementById('f-nome').value = t.nome;
     document.getElementById('f-paciente').value = t.paciente || '';
+    document.getElementById('f-valor').value = t.valor;
+    document.getElementById('f-elementos').value = t.elementos || '';
+    document.getElementById('f-valor-elemento').value = t.valorElemento || '';
     document.getElementById('f-status').value = t.status;
     document.getElementById('f-data').value = t.data;
     document.getElementById('f-desc').value = t.desc || '';
     document.getElementById('f-cliente').value = t.clienteId || '';
-
-    // Suporte ao formato antigo (item único) e novo (arrays)
-    const analogItems  = t.itemsAnalog  || (t.tipo === 'analog'  ? [{ nome: t.nome, qtd: 1, valorUnit: t.valor, subtotal: t.valor }] : []);
-    const digitalItems = t.itemsDigital || (t.tipo === 'digital' ? [{ nome: t.nome, qtd: t.elementos || 1, valorUnit: t.valorElemento || t.valor, subtotal: t.valor }] : []);
-
-    analogItems.forEach(item => addItemRow('analog', item));
-    digitalItems.forEach(item => addItemRow('digital', item));
-
-    // Open on the tab that has items (prefer analog)
-    if (!analogItems.length && digitalItems.length) switchModalTab('digital');
-    recalcTotals();
   }
 }
 
@@ -1606,57 +1272,58 @@ function closeModal() {
   document.getElementById('modal-trabalho').classList.remove('open');
 }
 
-// Legacy stubs
-function selectType(tipo) {}
-function calcValorDigital() {}
-function popularSeletorPrecos() {}
-function aplicarPrecoTabela() {}
+function selectType(tipo) {
+  document.getElementById('f-tipo').value = tipo;
+  const a = document.getElementById('opt-analog');
+  const d = document.getElementById('opt-digital');
+  a.className = 'type-option' + (tipo === 'analog' ? ' selected analog' : '');
+  d.className = 'type-option' + (tipo === 'digital' ? ' selected digital' : '');
+
+  const isDigital = tipo === 'digital';
+  document.getElementById('grupo-elementos').style.display       = isDigital ? '' : 'none';
+  document.getElementById('grupo-valor-elemento').style.display  = isDigital ? '' : 'none';
+
+  if (!isDigital) {
+    document.getElementById('f-elementos').value = '';
+    document.getElementById('f-valor-elemento').value = '';
+  }
+  popularSeletorPrecos();
+}
+
+function calcValorDigital() {
+  const qtd = parseFloat(document.getElementById('f-elementos').value) || 0;
+  const vpe  = parseFloat(document.getElementById('f-valor-elemento').value) || 0;
+  if (qtd > 0 && vpe > 0) {
+    document.getElementById('f-valor').value = (qtd * vpe).toFixed(2);
+  }
+}
 
 async function saveTrabalho() {
-  const paciente  = document.getElementById('f-paciente').value.trim();
-  const status    = document.getElementById('f-status').value;
-  const data      = document.getElementById('f-data').value;
-  const desc      = document.getElementById('f-desc').value.trim();
+  const nome     = document.getElementById('f-nome').value.trim();
+  const paciente = document.getElementById('f-paciente').value.trim();
+  const valor    = parseFloat(document.getElementById('f-valor').value) || 0;
+  const tipo     = document.getElementById('f-tipo').value;
+  const status   = document.getElementById('f-status').value;
+  const data     = document.getElementById('f-data').value;
+  const desc     = document.getElementById('f-desc').value.trim();
   const clienteId = document.getElementById('f-cliente').value;
-  const editId    = document.getElementById('edit-id').value;
+  const editId   = document.getElementById('edit-id').value;
+  const elementos     = tipo === 'digital' ? (parseInt(document.getElementById('f-elementos').value) || 0) : 0;
+  const valorElemento = tipo === 'digital' ? (parseFloat(document.getElementById('f-valor-elemento').value) || 0) : 0;
 
-  const itemsAnalog  = getItemsFromModal('analog');
-  const itemsDigital = getItemsFromModal('digital');
-
-  if (!itemsAnalog.length && !itemsDigital.length) {
-    alert('Adicione pelo menos um item (analógico ou digital).'); return;
-  }
-
-  // Build a label for the work (first item name or combined)
-  const allItems = [...itemsAnalog, ...itemsDigital];
-  const nomePrincipal = allItems.map(i => i.nome).filter(Boolean).join(', ') || 'Trabalho';
-
-  const totalAnalog  = itemsAnalog.reduce((s, i) => s + i.subtotal, 0);
-  const totalDigital = itemsDigital.reduce((s, i) => s + i.subtotal, 0);
-  const totalGeral   = totalAnalog + totalDigital;
-
-  // Determine primary tipo (for backwards compat display)
-  const tipo = itemsDigital.length && !itemsAnalog.length ? 'digital' : 'analog';
-  // Total elementos digitais — apenas itens marcados como "conta elemento"
-  const elementos = itemsDigital
-    .filter(i => i.contaElemento)
-    .reduce((s, i) => s + (i.qtd || 1), 0);
-
-  const payload = {
-    nome: nomePrincipal,
-    paciente, valor: totalGeral, tipo, status, data, desc, clienteId,
-    itemsAnalog, itemsDigital, totalAnalog, totalDigital,
-    elementos, valorElemento: itemsDigital[0]?.valorUnit || 0,
-  };
+  if (!nome) { alert('Informe o trabalho.'); return; }
 
   if (editId) {
     const existing = trabalhos.find(x => x.id === editId);
-    await saveTrabalhoFB({ ...(existing || {}), ...payload, id: editId });
+    const updated = { ...(existing||{}), id: editId, nome, paciente, valor, tipo, status, data, desc, clienteId, elementos, valorElemento };
+    await saveTrabalhoFB(updated);
   } else {
-    await saveTrabalhoFB({ ...payload, id: uid(), criadoEm: Date.now() });
+    const novo = { id: uid(), nome, paciente, valor, tipo, status, data, desc, clienteId, elementos, valorElemento, criadoEm: Date.now() };
+    await saveTrabalhoFB(novo);
   }
 
   closeModal();
+  // render é disparado pelo listener onSnapshot automaticamente
 }
 
 async function deleteTrabalho(id) {
@@ -1749,39 +1416,15 @@ function renderTrabalhos() {
 
   tbody.innerHTML = list.map((t,i) => {
     const c = clientes.find(x => x.id === t.clienteId);
-
-    // Build type badge — may have both
-    let typeBadge = '';
-    const hasAnalog  = t.itemsAnalog  && t.itemsAnalog.length;
-    const hasDigital = t.itemsDigital && t.itemsDigital.length;
-    if (hasAnalog && hasDigital) {
-      typeBadge = `<span class="type-badge analog" style="font-size:10px;padding:2px 7px"><span class="dot"></span>Analógico</span> <span class="type-badge digital" style="font-size:10px;padding:2px 7px;margin-left:3px"><span class="dot"></span>Digital</span>`;
-    } else {
-      typeBadge = `<span class="type-badge ${t.tipo}"><span class="dot"></span>${t.tipo==='analog'?'Analógico':'Digital'}</span>`;
-    }
-
-    // Build nome display
-    let nomeDisplay = '';
-    if (hasAnalog || hasDigital) {
-      const allItems = [...(t.itemsAnalog||[]), ...(t.itemsDigital||[])];
-      nomeDisplay = allItems.map(item => {
-        const color = t.itemsAnalog?.includes(item) ? 'var(--accent-analog)' : 'var(--accent-digital)';
-        const qtdStr = item.qtd > 1 ? `<span style="color:${color};font-weight:700">×${item.qtd}</span> ` : '';
-        return `<div style="font-size:12px;line-height:1.6">${qtdStr}${item.nome || '<em style="color:var(--text-muted)">sem nome</em>'}</div>`;
-      }).join('');
-    } else {
-      nomeDisplay = t.nome;
-    }
-
     const elemInfo = t.tipo === 'digital' && t.elementos ? `<br><span style="font-size:11px;color:var(--accent-digital)">${t.elementos} elem.</span>` : '';
     return `<tr>
       <td><span class="client-id">#${String(list.length - i).padStart(3,'0')}</span></td>
       <td><span class="client-name">${c ? c.nome : '<span style="color:var(--text-muted)">—</span>'}</span></td>
       <td>
-        ${nomeDisplay}
-        ${t.paciente ? `<div style="font-size:11px;color:var(--text-muted)">Paciente: ${t.paciente}</div>` : ''}
+        ${t.nome}
+        ${t.paciente ? `<br><span style="font-size:11px;color:var(--text-muted)">Paciente: ${t.paciente}</span>` : ''}
       </td>
-      <td>${typeBadge}${elemInfo}</td>
+      <td><span class="type-badge ${t.tipo}"><span class="dot"></span>${t.tipo==='analog'?'Analógico':'Digital'}</span>${elemInfo}</td>
       <td><span class="status-badge ${t.status}">${statusLabel(t.status)}</span></td>
       <td><span class="money-cell">${fmt(t.valor)}</span></td>
       <td style="font-size:12px;color:var(--text-muted)">${formatDate(t.data)}</td>
@@ -1860,17 +1503,7 @@ function renderDashboard() {
   document.getElementById('dash-clients').textContent       = clientes.length;
   document.getElementById('dash-clients-sub').textContent   = clientes.length === 1 ? 'cadastrado' : 'cadastrados';
 
-  // Elementos digitais — apenas itens marcados como "conta elemento"
-  const totalElementos = trabalhos
-    .filter(t => t.tipo === 'digital' || (t.itemsDigital && t.itemsDigital.length))
-    .reduce((s, t) => {
-      // Novo formato: soma só os itens com contaElemento
-      if (t.itemsDigital && t.itemsDigital.length) {
-        return s + t.itemsDigital.filter(i => i.contaElemento).reduce((a, i) => a + (i.qtd || 1), 0);
-      }
-      // Formato antigo: usa o campo elementos diretamente
-      return s + (t.elementos || 0);
-    }, 0);
+  const totalElementos = trabalhos.filter(t=>t.tipo==='digital').reduce((s,t)=>s+(t.elementos||0),0);
   document.getElementById('dash-elementos').textContent     = totalElementos;
   document.getElementById('dash-elementos-sub').textContent = totalElementos === 1 ? 'desenhado' : 'desenhados';
 
@@ -1959,6 +1592,30 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 });
 
 // ─── EXPORT PDF ──────────────────────────────────────
+function pdfStr(str) {
+  // Remove/substitui caracteres não suportados pela fonte helvetica do jsPDF
+  return (str || '')
+    .replace(/ã/g,'a').replace(/Ã/g,'A')
+    .replace(/â/g,'a').replace(/Â/g,'A')
+    .replace(/á/g,'a').replace(/Á/g,'A')
+    .replace(/à/g,'a').replace(/À/g,'A')
+    .replace(/ê/g,'e').replace(/Ê/g,'E')
+    .replace(/é/g,'e').replace(/É/g,'E')
+    .replace(/è/g,'e').replace(/È/g,'E')
+    .replace(/í/g,'i').replace(/Í/g,'I')
+    .replace(/î/g,'i').replace(/Î/g,'I')
+    .replace(/ó/g,'o').replace(/Ó/g,'O')
+    .replace(/ô/g,'o').replace(/Ô/g,'O')
+    .replace(/õ/g,'o').replace(/Õ/g,'O')
+    .replace(/ú/g,'u').replace(/Ú/g,'U')
+    .replace(/û/g,'u').replace(/Û/g,'U')
+    .replace(/ü/g,'u').replace(/Ü/g,'U')
+    .replace(/ç/g,'c').replace(/Ç/g,'C')
+    .replace(/ñ/g,'n').replace(/Ñ/g,'N')
+    .replace(/[✓✗]/g, '')
+    .replace(/[^\x00-\x7F]/g, '?');
+}
+
 function exportClientePDF(clienteId) {
   const c = clientes.find(x => x.id === clienteId);
   if (!c) return;
@@ -1999,7 +1656,7 @@ function exportClientePDF(clienteId) {
 
   doc.setFontSize(9);
   doc.setTextColor(152, 152, 176);
-  doc.text(`Período: ${formatDate(dataIni)} a ${formatDate(dataFim)}`, margin, 23);
+  doc.text(pdfStr('Periodo: ' + formatDate(dataIni) + ' a ' + formatDate(dataFim)), margin, 23);
 
   // date top right
   const hoje2 = new Date().toLocaleDateString('pt-BR');
@@ -2011,7 +1668,7 @@ function exportClientePDF(clienteId) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(232, 232, 240);
-  doc.text(c.nome, margin, 34);
+  doc.text(pdfStr(c.nome), margin, 34);
 
   // ── Sub info ──
   let infoY = 50;
@@ -2032,15 +1689,15 @@ function exportClientePDF(clienteId) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(232, 232, 240);
-  doc.text(c.contato || '—', margin + 6, infoY + 8);
-  doc.text(c.social || '—', margin + 70, infoY + 8);
+  doc.text(pdfStr(c.contato || '-'), margin + 6, infoY + 8);
+  doc.text(pdfStr(c.social || '-'), margin + 70, infoY + 8);
   doc.text(String(works.length), margin + 140, infoY + 8);
 
   if (c.obs) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(152, 152, 176);
-    doc.text('Obs: ' + c.obs, margin + 6, infoY + 17);
+    doc.text(pdfStr('Obs: ' + c.obs), margin + 6, infoY + 17);
   }
 
   infoY += 36;
@@ -2088,7 +1745,8 @@ function exportClientePDF(clienteId) {
   doc.setFillColor(14, 22, 16);
   doc.roundedRect(margin, infoY, W - margin*2, 14, 2, 2, 'F');
   doc.setFontSize(8); doc.setTextColor(74, 222, 128);
-  doc.text(`✓ Pago: R$ ${fmt(totPago)}   |   Pendente/Concluído: R$ ${fmt(totGeral - totPago)}`, margin + 4, infoY + 9);
+  const txtPago = 'Pago: R$ ' + fmt(totPago) + '   |   A receber: R$ ' + fmt(totGeral - totPago);
+  doc.text(txtPago, margin + 4, infoY + 9);
 
   infoY += 20;
 
@@ -2111,9 +1769,9 @@ function exportClientePDF(clienteId) {
       head: [['#', 'Trabalho', 'Tipo', 'Status', 'Valor', 'Data']],
       body: works.map((t, i) => [
         String(i + 1).padStart(3, '0'),
-        t.nome + (t.paciente ? `\nPaciente: ${t.paciente}` : ''),
-        t.tipo === 'analog' ? 'Analógico' : 'Digital',
-        statusLabel(t.status),
+        pdfStr(t.nome + (t.paciente ? '\nPaciente: ' + t.paciente : '')),
+        t.tipo === 'analog' ? 'Analogico' : 'Digital',
+        pdfStr(statusLabel(t.status)),
         'R$ ' + fmt(t.valor),
         formatDate(t.data)
       ]),
@@ -2147,8 +1805,8 @@ function exportClientePDF(clienteId) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(107, 107, 128);
-  doc.text('LAB.STUDIO — Sistema de Gestão', margin, pageH - 4);
-  doc.text('Página 1', W - margin, pageH - 4, { align: 'right' });
+  doc.text('LAB.STUDIO - Sistema de Gestao', margin, pageH - 4);
+  doc.text('Pagina 1', W - margin, pageH - 4, { align: 'right' });
 
   const fileName = 'cliente_' + c.nome.replace(/\s+/g, '_').toLowerCase() + '.pdf';
   doc.save(fileName);
@@ -2209,14 +1867,6 @@ window.openModal         = openModal;
 window.closeModal        = closeModal;
 window.selectType        = selectType;
 window.calcValorDigital  = calcValorDigital;
-window.switchModalTab    = switchModalTab;
-window.addItemRow        = addItemRow;
-window.changeQty         = changeQty;
-window.removeItemRow     = removeItemRow;
-window.onSubtotalEdit    = onSubtotalEdit;
-window.recalcTotals      = recalcTotals;
-window.aplicarPrecoSelect = aplicarPrecoSelect;
-window.toggleContaElemento = toggleContaElemento;
 window.saveTrabalho      = saveTrabalho;
 window.deleteTrabalho    = deleteTrabalho;
 window.openClienteModal  = openClienteModal;
