@@ -33,6 +33,7 @@ const provider = new GoogleAuthProvider();
 let unsubTrabalhos = null;
 let unsubClientes  = null;
 let unsubPrecos    = null;
+let unsubConfig    = null;
 
 function userCol(colName) {
   return collection(db, 'usuarios', window._uid, colName);
@@ -67,26 +68,53 @@ onAuthStateChanged(auth, user => {
   if (unsubTrabalhos) { unsubTrabalhos(); unsubTrabalhos = null; }
   if (unsubClientes)  { unsubClientes();  unsubClientes  = null; }
   if (unsubPrecos)    { unsubPrecos();    unsubPrecos    = null; }
+  if (unsubConfig)    { unsubConfig();    unsubConfig    = null; }
   window._appReady = false;
 
   if (user) {
     window._uid = user.uid;
+    window._userDisplayName = user.displayName || user.email;
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-root').style.display   = 'block';
-    document.getElementById('sync-status').textContent  = '● ' + (user.displayName || user.email);
-    document.getElementById('sync-status').style.color  = 'var(--green)';
+    document.getElementById('sync-status').textContent  = '⏳ sincronizando...';
+    document.getElementById('sync-status').style.color  = 'var(--text-muted)';
     document.getElementById('btn-logout').style.display = 'flex';
+
+    // Controle de estado para evitar renderizações quebradas antes dos dados chegarem
+    let syncState = { trab: false, cli: false, precos: false, conf: false };
+    const checkAppReady = () => {
+      if (syncState.trab && syncState.cli && syncState.precos && syncState.conf && !window._appReady) {
+        window._appReady = true;
+        document.getElementById('sync-status').textContent  = '● ' + window._userDisplayName;
+        document.getElementById('sync-status').style.color  = 'var(--green)';
+        showToast('Sincronizado com sucesso', 'success');
+        window.renderDashboard();
+        window.updateBadges();
+      }
+    };
+
+    unsubConfig = onSnapshot(userDoc('configuracoes', 'geral'), snap => {
+      if (snap.exists()) {
+        window.metaMensal = snap.data().metaMensal || 5000;
+      } else {
+        window.metaMensal = 5000;
+      }
+      syncState.conf = true; checkAppReady();
+      if (window._appReady) window.renderDashboard();
+    });
 
     unsubTrabalhos = onSnapshot(userCol('trabalhos'), snap => {
       window.trabalhos = [];
       snap.forEach(d => window.trabalhos.push(d.data()));
       window.trabalhos.sort((a,b) => (b.criadoEm||0) - (a.criadoEm||0));
+      syncState.trab = true; checkAppReady();
       if (window._appReady) { window.renderDashboard(); window.renderTrabalhos(); window.updateBadges(); }
     });
 
     unsubClientes = onSnapshot(userCol('clientes'), snap => {
       window.clientes = [];
       snap.forEach(d => window.clientes.push(d.data()));
+      syncState.cli = true; checkAppReady();
       if (window._appReady) { window.renderDashboard(); window.renderClientes(); window.updateBadges(); }
     });
 
@@ -94,18 +122,16 @@ onAuthStateChanged(auth, user => {
       window.precos = [];
       snap.forEach(d => window.precos.push(d.data()));
       window.precos.sort((a,b) => a.nome.localeCompare(b.nome));
+      syncState.precos = true; checkAppReady();
       if (window._appReady) { window.renderPrecos(); window.updateBadges(); window.atualizarSeletorPrecos(); }
     });
 
-    window._appReady = true;
-    window.renderDashboard();
-    window.updateBadges();
-    showToast('Sincronizado com sucesso', 'success');
   } else {
     window._uid = null;
     window.trabalhos = [];
     window.clientes  = [];
     window.precos    = [];
+    window.metaMensal = 5000;
     document.getElementById('tela-login').style.display = 'flex';
     document.getElementById('app-root').style.display   = 'none';
     document.getElementById('btn-logout').style.display = 'none';
@@ -1019,23 +1045,7 @@ onAuthStateChanged(auth, user => {
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }
-  /* Forçar cores nos campos dos modais */
-.modal input,
-.modal select,
-.modal textarea,
-.modal .preco-card {
-    background: #141419 !important;
-    color: #f1f1f4 !important;
-    border-color: rgba(255,255,255,0.1) !important;
-}
-
-/* Especificamente para os selects dentro do modal de trabalho */
-#modal-trabalho select,
-#modal-trabalho input,
-#modal-trabalho textarea {
-    background: #141419 !important;
-    color: #f1f1f4 !important;
-}
+  
   /* Skeleton Loading */
   .skeleton {
     background: linear-gradient(90deg, var(--surface) 25%, rgba(255,255,255,0.05) 50%, var(--surface) 75%);
@@ -1305,7 +1315,6 @@ onAuthStateChanged(auth, user => {
   <div class="tab" onclick="switchTab('precos')">◑ Preços <span class="tab-badge" id="badge-precos">0</span></div>
 </nav>
 <main>
-  <!-- DASHBOARD -->
   <div class="page active" id="page-dashboard">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
       <div class="section-title">Visão Geral</div>
@@ -1353,7 +1362,6 @@ onAuthStateChanged(auth, user => {
     </div>
   </div>
 
-  <!-- TRABALHOS -->
   <div class="page" id="page-trabalhos">
     <div class="filters">
       <input class="search-input" type="text" placeholder="Buscar trabalho ou cliente..." id="search-trabalhos" oninput="debounceRenderTrabalhos()">
@@ -1376,7 +1384,6 @@ onAuthStateChanged(auth, user => {
     </div>
   </div>
 
-  <!-- CLIENTES -->
   <div class="page" id="page-clientes">
     <div class="filters">
       <input class="search-input" placeholder="Buscar cliente..." id="search-clientes" oninput="debounceRenderClientes()">
@@ -1392,7 +1399,6 @@ onAuthStateChanged(auth, user => {
     </div>
   </div>
 
-  <!-- PREÇOS -->
   <div class="page" id="page-precos">
     <div class="filters">
       <input class="search-input" placeholder="Buscar serviço..." id="search-precos" oninput="debounceRenderPrecos()">
@@ -1409,10 +1415,8 @@ onAuthStateChanged(auth, user => {
   </div>
 </main>
 
-<!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- MODAIS -->
 <div class="modal-overlay" id="modal-trabalho" onclick="if(event.target===this) closeModal()">
   <div class="modal" style="position: relative;">
     <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">✕</button>
@@ -1558,7 +1562,6 @@ onAuthStateChanged(auth, user => {
   </div>
 </div>
 
-<!-- Modal de Confirmação -->
 <div class="modal-overlay" id="modal-confirm" onclick="if(event.target===this) closeConfirmModal()">
   <div class="modal confirm-modal">
     <div class="confirm-icon" id="confirm-icon">⚠️</div>
@@ -1582,6 +1585,12 @@ function escapeHtml(text) {
 
 function sanitizeInput(value) {
   return value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim();
+}
+
+// CORREÇÃO: Função de data local para contornar problemas de UTC
+function getLocalISOString() {
+  const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+  return new Date(Date.now() - tzOffset).toISOString();
 }
 
 // Sistema de Toast Notifications
@@ -1628,8 +1637,8 @@ function debounce(func, wait) {
 window.trabalhos = window.trabalhos || [];
 window.clientes = window.clientes || [];
 window.precos = window.precos || [];
+window.metaMensal = window.metaMensal || 5000;
 let filterTrabAtivo = 'todos';
-let metaMensal = 5000;
 let confirmCallback = null;
 
 // UTILS
@@ -1699,7 +1708,7 @@ function closeConfirmModal() {
 
 // RENDER DASHBOARD
 function renderDashboard() {
-  const mesSel = document.getElementById('dash-mes').value || new Date().toISOString().slice(0,7);
+  const mesSel = document.getElementById('dash-mes').value || getLocalISOString().slice(0,7);
   if(!document.getElementById('dash-mes').value) document.getElementById('dash-mes').value = mesSel;
   
   const doMes = trabalhos.filter(t=> t.data && t.data.slice(0,7)===mesSel);
@@ -1759,11 +1768,13 @@ function renderDashboard() {
     </div>`;
   document.getElementById('donut-chart').innerHTML = donutHtml;
 
-  const metaProgress = Math.min(100, (total/metaMensal)*100);
+  // CORREÇÃO: Evitar divisão por zero na barra de progresso
+  const metaProgress = window.metaMensal > 0 ? Math.min(100, (total/window.metaMensal)*100) : (total > 0 ? 100 : 0);
+  
   document.getElementById('meta-container').innerHTML = `
     <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;">
       <span style="color:var(--text-muted);">Meta mensal</span>
-      <span style="color:var(--text); font-weight:600;">R$ ${fmt(metaMensal)}</span>
+      <span style="color:var(--text); font-weight:600;">R$ ${fmt(window.metaMensal)}</span>
     </div>
     <div class="meta-bar">
       <div class="meta-fill" style="width:${metaProgress}%"></div>
@@ -1775,14 +1786,17 @@ function renderDashboard() {
     <button class="btn-backup" style="margin-top:16px; width:100%;" onclick="definirMeta()">Alterar Meta</button>
   `;
 
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = getLocalISOString().slice(0,10);
   const entregas = trabalhos.filter(t=> t.dataEntrega && t.dataEntrega >= hoje && t.status !== 'pago' && t.status !== 'cancelado')
     .sort((a,b)=>a.dataEntrega.localeCompare(b.dataEntrega))
     .slice(0,5);
     
   if(entregas.length) {
     document.getElementById('entregas-lista').innerHTML = entregas.map(t=>{
-      const dias = Math.ceil((new Date(t.dataEntrega) - new Date(hoje)) / (1000 * 60 * 60 * 24));
+      // Normalização de datas para contagem precisa de dias
+      const dateEntrega = new Date(t.dataEntrega + 'T00:00:00');
+      const dateHoje = new Date(hoje + 'T00:00:00');
+      const dias = Math.ceil((dateEntrega - dateHoje) / (1000 * 60 * 60 * 24));
       const urgente = dias <= 2 ? 'style="color:var(--red);"' : '';
       return `<div class="entrega-item">
         <div>
@@ -1831,12 +1845,21 @@ function renderDashboard() {
   </div>`).join('')||'<div class="empty" style="padding:32px;">Nenhum trabalho recente</div>';
 }
 
-function definirMeta() { 
-  let nova=prompt('Nova meta mensal (R$):', metaMensal); 
+// CORREÇÃO: Salvar meta mensal no Firebase Firestore
+async function definirMeta() { 
+  let nova=prompt('Nova meta mensal (R$):', window.metaMensal); 
   if(nova && !isNaN(parseFloat(nova))) {
-    metaMensal=parseFloat(nova);
-    showToast('Meta atualizada para R$ ' + fmt(metaMensal), 'success');
-    renderDashboard();
+    let valor = parseFloat(nova);
+    if(valor < 0) valor = 0;
+    
+    window.metaMensal = valor;
+    try {
+      await window._setDoc(window._userDoc('configuracoes', 'geral'), { metaMensal: valor }, { merge: true });
+      showToast('Meta atualizada para R$ ' + fmt(valor), 'success');
+      // O renderDashboard será chamado automaticamente pelo onSnapshot do Firebase
+    } catch(e) {
+      showToast('Erro ao salvar meta no banco de dados.', 'error');
+    }
   }
 }
 
@@ -2035,7 +2058,8 @@ function openModal(id) {
   selCliente.innerHTML = '<option value="">— Selecionar —</option>';
   clientes.forEach(c=>{ selCliente.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nome)}</option>`; });
   
-  document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
+  // CORREÇÃO: Utilizando o Local ISO String
+  document.getElementById('f-data').value = getLocalISOString().split('T')[0];
   document.getElementById('modal-title-text').textContent = id ? '🖌️ Editar Trabalho' : '🖌️ Novo Trabalho';
   
   // Reset validação
@@ -2342,14 +2366,15 @@ function deletePreco(id){
 
 // BACKUP
 function exportarBackup(){ 
-  let dados={versao:'2.0',exportadoEm:new Date().toISOString(),trabalhos,clientes,precos,metaMensal}; 
+  let dados={versao:'2.0',exportadoEm:new Date().toISOString(),trabalhos,clientes,precos,metaMensal:window.metaMensal}; 
   let a=document.createElement('a'); 
   a.href=URL.createObjectURL(new Blob([JSON.stringify(dados,null,2)],{type:'application/json'})); 
-  a.download=`labstudio_backup_${new Date().toISOString().slice(0,10)}.json`; 
+  a.download=`labstudio_backup_${getLocalISOString().slice(0,10)}.json`; 
   a.click();
   showToast('Backup exportado!', 'success');
 }
 
+// CORREÇÃO: Validação estrita do arquivo de backup
 function importarBackup(event){ 
   let file=event.target.files[0]; 
   if(!file) return; 
@@ -2359,16 +2384,22 @@ function importarBackup(event){
     reader.onload=async e=>{ 
       try{ 
         let dados=JSON.parse(e.target.result); 
-        if(!dados.trabalhos || !dados.clientes) throw new Error('Formato inválido');
+        
+        if(!dados || typeof dados !== 'object') throw new Error('O arquivo não é um JSON válido.');
+        if(!Array.isArray(dados.clientes) || !Array.isArray(dados.trabalhos)) throw new Error('Estrutura de dados incompatível.');
         
         for(let c of dados.clientes) await saveClienteFB(c); 
         for(let t of dados.trabalhos) await saveTrabalhoFB(t); 
         for(let p of (dados.precos||[])) await savePrecoFB(p);
-        if(dados.metaMensal) metaMensal = dados.metaMensal;
+        
+        if(dados.metaMensal && !isNaN(parseFloat(dados.metaMensal))) {
+          window.metaMensal = parseFloat(dados.metaMensal);
+          await window._setDoc(window._userDoc('configuracoes', 'geral'), { metaMensal: window.metaMensal }, { merge: true });
+        }
         
         showToast('Backup importado com sucesso!', 'success');
       }catch(err){ 
-        showToast('Arquivo de backup inválido', 'error');
+        showToast('Arquivo de backup inválido ou corrompido', 'error');
         console.error(err);
       } 
     }; 
@@ -2382,9 +2413,9 @@ function exportClientePDF(clienteId){
   let c=clientes.find(x=>x.id===clienteId); 
   if(!c) return; 
   
-  let dataIni=prompt('Data inicial (AAAA-MM-DD):', new Date().toISOString().slice(0,7)+'-01'); 
+  let dataIni=prompt('Data inicial (AAAA-MM-DD):', getLocalISOString().slice(0,7)+'-01'); 
   if(!dataIni) return; 
-  let dataFim=prompt('Data final (AAAA-MM-DD):', new Date().toISOString().slice(0,10)); 
+  let dataFim=prompt('Data final (AAAA-MM-DD):', getLocalISOString().slice(0,10)); 
   if(!dataFim) return; 
   
   let works=trabalhos.filter(t=>t.clienteId===clienteId && t.data>=dataIni && t.data<=dataFim); 
