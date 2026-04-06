@@ -452,7 +452,7 @@ onAuthStateChanged(auth, user => {
   
   .search-input:focus { 
     border-color: var(--accent-analog); 
-    background: var(--surface2);
+    background: rgba(255,255,255,0.03);
     box-shadow: 0 0 0 3px rgba(255,159,67,0.1);
   }
   
@@ -807,6 +807,54 @@ onAuthStateChanged(auth, user => {
     border-radius: 6px;
   }
   
+  /* TABELA - CORREÇÃO MOBILE */
+  .table-wrap {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-wrap table {
+    min-width: 700px;
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  th {
+    background: rgba(255,255,255,0.02);
+    padding: 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  
+  td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  
+  tr:hover td {
+    background: rgba(255,255,255,0.02);
+    color: var(--text);
+  }
+  
+  .money-cell {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--green);
+    font-weight: 600;
+  }
+  
   /* Modais */
   .modal-overlay {
     display: none; 
@@ -1128,76 +1176,6 @@ onAuthStateChanged(auth, user => {
     opacity: 0.5;
   }
   
-  /* Tabela */
- .table-wrap {
-  background: var(--surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  overflow-x: auto;          /* ALTERADO: permite scroll horizontal */
-  overflow-y: hidden;        /* mantém vertical sem scroll */
-  -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
-}
-
-.table-wrap table {
-  min-width: 700px;          /* ADICIONADO: força largura mínima para scroll em mobile */
-  width: 100%;
-}
-
-/* Garante que as colunas de valor e ações não quebrem linha */
-td.money-cell,
-td:last-child {
-  white-space: nowrap;
-}
-
-/* Ajuste responsivo para não cortar conteúdo */
-@media (max-width: 768px) {
-  .table-wrap {
-    margin: 0 -20px;         /* compensa o padding do main em mobile */
-    border-radius: 0;        /* remove bordas arredondadas quando extrapola tela */
-    border-left: none;
-    border-right: none;
-  }
-  
-  .table-wrap table {
-    min-width: 650px;        /* ajuste fino para telas menores */
-  }
-}
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  th {
-    background: rgba(255,255,255,0.02);
-    padding: 16px;
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    font-weight: 700;
-    border-bottom: 1px solid var(--border);
-  }
-  
-  td {
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: 14px;
-    color: var(--text-dim);
-  }
-  
-  tr:hover td {
-    background: rgba(255,255,255,0.02);
-    color: var(--text);
-  }
-  
-  .money-cell {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--green);
-    font-weight: 600;
-  }
-  
   /* Responsivo */
   @media (max-width: 768px) {
     main { padding: 20px; }
@@ -1211,6 +1189,18 @@ td:last-child {
     .modal { padding: 24px; }
     .toast-container { left: 20px; right: 20px; }
     .toast { min-width: auto; max-width: 100%; }
+    
+    /* Correção tabela mobile */
+    .table-wrap {
+      margin: 0 -20px;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+    }
+    
+    .table-wrap table {
+      min-width: 650px;
+    }
   }
   
   /* Utilitários */
@@ -1720,758 +1710,4 @@ function renderDashboard() {
       <div class="stat-sub">concluídos não pagos</div>
     </div>
     <div class="stat-card clients">
-      <div class="stat-label"><span class="stat-dot" style="background:var(--green); box-shadow:0 0 8px var(--green);"></span>Clientes</div>
-      <div class="stat-value">${clientes.length}</div>
-      <div class="stat-sub">cadastrados</div>
-    </div>`;
-    
-  document.getElementById('stats-cards').innerHTML = stats;
-
-  const totalGeral = analog+digital;
-  const analogPct = totalGeral ? (analog/totalGeral)*100 : 0;
-  const digitalPct = totalGeral ? (digital/totalGeral)*100 : 0;
-  
-  const donutHtml = `
-    <svg viewBox="0 0 40 40" class="donut-svg">
-      <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="4"/>
-      <circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent-analog)" stroke-width="4" stroke-dasharray="${analogPct*1.005} 100" stroke-dashoffset="0" transform="rotate(-90 20 20)" stroke-linecap="round"/>
-      <circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent-digital)" stroke-width="4" stroke-dasharray="${digitalPct*1.005} 100" stroke-dashoffset="${-analogPct*1.005}" transform="rotate(-90 20 20)" stroke-linecap="round"/>
-    </svg>
-    <div class="donut-legend">
-      <span style="color:var(--accent-analog); display:flex; align-items:center; gap:6px;">
-        <span style="width:8px;height:8px;background:var(--accent-analog);border-radius:50%;"></span>
-        Analógico ${fmt(analog)}
-      </span>
-      <span style="color:var(--accent-digital); display:flex; align-items:center; gap:6px;">
-        <span style="width:8px;height:8px;background:var(--accent-digital);border-radius:50%;"></span>
-        Digital ${fmt(digital)}
-      </span>
-    </div>`;
-  document.getElementById('donut-chart').innerHTML = donutHtml;
-
-  const metaProgress = Math.min(100, (total/metaMensal)*100);
-  document.getElementById('meta-container').innerHTML = `
-    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;">
-      <span style="color:var(--text-muted);">Meta mensal</span>
-      <span style="color:var(--text); font-weight:600;">R$ ${fmt(metaMensal)}</span>
-    </div>
-    <div class="meta-bar">
-      <div class="meta-fill" style="width:${metaProgress}%"></div>
-    </div>
-    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:8px;">
-      <span style="color:var(--accent-analog); font-weight:700;">${Math.round(metaProgress)}% alcançado</span>
-      <span style="color:var(--text-muted);">R$ ${fmt(total)}</span>
-    </div>
-    <button class="btn-backup" style="margin-top:16px; width:100%;" onclick="definirMeta()">Alterar Meta</button>
-  `;
-
-  const hoje = new Date().toISOString().slice(0,10);
-  const entregas = trabalhos.filter(t=> t.dataEntrega && t.dataEntrega >= hoje && t.status !== 'pago' && t.status !== 'cancelado')
-    .sort((a,b)=>a.dataEntrega.localeCompare(b.dataEntrega))
-    .slice(0,5);
-    
-  if(entregas.length) {
-    document.getElementById('entregas-lista').innerHTML = entregas.map(t=>{
-      const dias = Math.ceil((new Date(t.dataEntrega) - new Date(hoje)) / (1000 * 60 * 60 * 24));
-      const urgente = dias <= 2 ? 'style="color:var(--red);"' : '';
-      return `<div class="entrega-item">
-        <div>
-          <div style="font-weight:600; color:var(--text);">${escapeHtml(t.nome)}</div>
-          <div style="font-size:11px; color:var(--text-muted);">${clientes.find(c=>c.id===t.clienteId)?.nome || 'Sem cliente'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div class="entrega-data" ${urgente}>${formatDate(t.dataEntrega)}</div>
-          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : dias + ' dias'}</div>
-        </div>
-      </div>`;
-    }).join('');
-  } else {
-    document.getElementById('entregas-lista').innerHTML = '<div class="empty" style="padding:32px;"><div class="empty-icon">📭</div><div>Nenhuma entrega prevista</div></div>';
-  }
-
-  const [ano, mes] = mesSel.split('-').map(Number);
-  let meses6 = [];
-  for(let i=5;i>=0;i--) { 
-    let d=new Date(ano, mes-1-i,1); 
-    let key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; 
-    let totalMes=trabalhos.filter(t=>t.data&&t.data.slice(0,7)===key).reduce((s,t)=>s+(parseFloat(t.valor)||0),0); 
-    meses6.push({key, label:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), total:totalMes}); 
-  }
-  const maxMes = Math.max(...meses6.map(m=>m.total))||1;
-  
-  document.getElementById('grafico-mensal').innerHTML = `<div class="bar-chart">`+
-    meses6.map(m=>`<div>
-      <div class="bar-label">
-        <span>${m.label}</span>
-        <span style="color:${m.key===mesSel?'var(--accent-analog)':'var(--text-dim)'}; font-weight:600;">R$ ${fmt(m.total)}</span>
-      </div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${(m.total/maxMes*100)}%; background:${m.key===mesSel?'linear-gradient(90deg, var(--accent-analog), #ff8c42)':'var(--accent-digital)'};"></div>
-      </div>
-    </div>`).join('')+
-  `</div>`;
-
-  const recent = [...trabalhos].sort((a,b)=>b.criadoEm-a.criadoEm).slice(0,5);
-  document.getElementById('recent-panel').innerHTML = recent.map(t=>`<div class="entrega-item" style="cursor:pointer;" onclick="openModal('${t.id}')">
-    <div>
-      <div style="font-weight:600; color:var(--text);">${escapeHtml(t.nome)}</div>
-      <div style="font-size:11px; color:var(--text-muted);">${formatDate(t.data)} • ${clientes.find(c=>c.id===t.clienteId)?.nome || 'Sem cliente'}</div>
-    </div>
-    <span style="color:var(--green); font-family:'JetBrains Mono', monospace; font-weight:600;">R$ ${fmt(t.valor)}</span>
-  </div>`).join('')||'<div class="empty" style="padding:32px;">Nenhum trabalho recente</div>';
-}
-
-function definirMeta() { 
-  let nova=prompt('Nova meta mensal (R$):', metaMensal); 
-  if(nova && !isNaN(parseFloat(nova))) {
-    metaMensal=parseFloat(nova);
-    showToast('Meta atualizada para R$ ' + fmt(metaMensal), 'success');
-    renderDashboard();
-  }
-}
-
-// RENDER TRABALHOS
-function renderTrabalhos() {
-  let search = sanitizeInput(document.getElementById('search-trabalhos').value||'').toLowerCase();
-  let mesFiltro = document.getElementById('f-mes-trab')?.value||'';
-  
-  let list = trabalhos.filter(t=>{
-    let c = clientes.find(x=>x.id===t.clienteId);
-    let matchSearch = !search || (t.nome && t.nome.toLowerCase().includes(search)) || (c && c.nome.toLowerCase().includes(search));
-    let matchMes = !mesFiltro || (t.data && t.data.slice(0,7)===mesFiltro);
-    let matchTipo = filterTrabAtivo==='todos' || 
-      (filterTrabAtivo==='analog' && t.tipo==='analog') || 
-      (filterTrabAtivo==='digital' && t.tipo==='digital') || 
-      (['pendente','andamento','concluido'].includes(filterTrabAtivo) && t.status===filterTrabAtivo);
-    return matchSearch && matchMes && matchTipo;
-  });
-  
-  let grouped = new Map();
-  list.forEach(t=>{ 
-    let cid=t.clienteId||'semcliente'; 
-    if(!grouped.has(cid)) grouped.set(cid,[]); 
-    grouped.get(cid).push(t); 
-  });
-  
-  let container = document.getElementById('trabalhos-cards-container');
-  if(grouped.size===0) { 
-    container.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div>Nenhum trabalho encontrado</div><div style="font-size:13px; margin-top:8px;">Tente ajustar os filtros</div></div>'; 
-    return; 
-  }
-  
-  let html='';
-  for(let [cid, works] of grouped.entries()){
-    let cliente = cid==='semcliente' ? null : clientes.find(c=>c.id===cid);
-    let nomeCliente = cliente ? escapeHtml(cliente.nome) : 'Sem cliente';
-    let totalCliente = works.reduce((s,t)=>s+(parseFloat(t.valor)||0),0);
-    
-    html+=`<div class="cliente-group">
-      <div class="group-header" onclick="toggleGroup(this)">
-        <div class="group-header-left">
-          <span class="cliente-nome">${nomeCliente}</span>
-          <span class="cliente-stats">${works.length} trabalho(s)</span>
-          <span class="cliente-total">R$ ${fmt(totalCliente)}</span>
-        </div>
-        <span style="transition:transform 0.3s;">▼</span>
-      </div>
-      <div class="cards-grid" style="display:grid;">`;
-      
-    works.forEach(t=>{
-      let tipoClass = t.tipo==='analog' ? '' : 'digital';
-      let clienteNome = clientes.find(c=>c.id===t.clienteId)?.nome || 'Sem cliente';
-      
-      html+=`<div class="trabalho-card">
-        <div class="card-header">
-          <span class="card-title">${escapeHtml(t.nome)}</span>
-          <span class="card-type-badge ${tipoClass}">${t.tipo==='analog'?'Analógico':'Digital'}</span>
-        </div>
-        <div class="card-details">
-          <span style="display:flex; align-items:center; gap:6px;">👤 ${escapeHtml(t.paciente||'—')}</span>
-          <span style="display:flex; align-items:center; gap:6px;">📅 ${formatDate(t.data)}</span>
-          <span class="card-status ${t.status}">${statusLabel(t.status)}</span>
-        </div>
-        <div class="card-value">R$ ${fmt(t.valor)}</div>
-        <div class="card-actions">
-          <button class="action-btn" onclick="event.stopPropagation(); openModal('${t.id}')" title="Editar">✎</button>
-          <button class="action-btn del" onclick="event.stopPropagation(); deleteTrabalho('${t.id}')" title="Excluir">✕</button>
-        </div>
-      </div>`;
-    });
-    
-    html+=`</div></div>`;
-  }
-  container.innerHTML = html;
-}
-
-const debounceRenderTrabalhos = debounce(renderTrabalhos, 300);
-const debounceRenderClientes = debounce(renderClientes, 300);
-const debounceRenderPrecos = debounce(renderPrecos, 300);
-
-function toggleGroup(el) { 
-  let grid = el.nextElementSibling; 
-  let arrow = el.querySelector('span:last-child');
-  if(grid) {
-    let isHidden = grid.style.display==='none';
-    grid.style.display = isHidden ? 'grid' : 'none';
-    arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-  }
-}
-
-function setFilterTrab(f) { 
-  filterTrabAtivo=f; 
-  document.querySelectorAll('#page-trabalhos .filter-btn').forEach(b=>b.classList.remove('active')); 
-  document.getElementById(`f-${f}`)?.classList.add('active'); 
-  renderTrabalhos(); 
-}
-
-// RENDER CLIENTES
-function renderClientes() {
-  let q = sanitizeInput(document.getElementById('search-clientes').value||'').toLowerCase();
-  let list = clientes.filter(c=>!q || (c.nome && c.nome.toLowerCase().includes(q)));
-  let tbody = document.getElementById('tbody-clientes');
-  
-  if(!list.length) { 
-    tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">👤</div><div>Nenhum cliente encontrado</div></div></td></tr>'; 
-    return; 
-  }
-  
-  tbody.innerHTML = list.map((c,i)=>{
-    const total = trabalhos.filter(t=>t.clienteId===c.id).reduce((s,t)=>s+(parseFloat(t.valor)||0),0);
-    const count = trabalhos.filter(t=>t.clienteId===c.id).length;
-    return `<tr>
-      <td style="font-family:'JetBrains Mono', monospace; color:var(--text-muted);">#${String(i+1).padStart(3,'0')}</td>
-      <td>
-        <div style="font-weight:600; color:var(--text);">${escapeHtml(c.nome)}</div>
-        ${c.social?`<div style="font-size:12px; color:var(--accent-digital);">${escapeHtml(c.social)}</div>`:''}
-      </td>
-      <td>${escapeHtml(c.contato||'—')}</td>
-      <td class="money-cell">R$ ${fmt(total)}</td>
-      <td><span class="tab-badge">${count}</span></td>
-      <td>
-        <button class="action-btn" onclick="exportClientePDF('${c.id}')" title="Exportar PDF">📄</button>
-        <button class="action-btn" onclick="openClienteModal('${c.id}')" title="Editar">✎</button>
-        <button class="action-btn del" onclick="deleteCliente('${c.id}')" title="Excluir">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-// PREÇOS
-function renderPrecos() {
-  let search = sanitizeInput(document.getElementById('search-precos').value||'').toLowerCase();
-  let clienteFiltro = document.getElementById('filtro-cliente-preco').value;
-  
-  let list = precos.filter(p=> (!clienteFiltro || p.clienteId===clienteFiltro) && p.nome && p.nome.toLowerCase().includes(search));
-  let container = document.getElementById('precos-cards-container');
-  
-  if(!list.length) { 
-    container.innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">💲</div><div>Nenhum preço cadastrado</div></div>'; 
-    return; 
-  }
-  
-  container.innerHTML = list.map(p=>{
-    let clienteNome = p.clienteId ? (clientes.find(c=>c.id===p.clienteId)?.nome||'Cliente') : '🌍 Global';
-    return `<div class="preco-card">
-      <div class="preco-nome">
-        <span>${escapeHtml(p.nome)}</span>
-        <span class="preco-cliente">${escapeHtml(clienteNome)}</span>
-      </div>
-      <div class="preco-valor">R$ ${fmt(p.valor)}</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">${escapeHtml(p.obs||'')}</div>
-      <div style="display:flex; gap:8px;">
-        <button class="action-btn" onclick="openPrecoModal('${p.id}')">✎ Editar</button>
-        <button class="action-btn del" onclick="deletePreco('${p.id}')">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function popularSelectClientesPreco() {
-  let sel = document.getElementById('pr-cliente');
-  sel.innerHTML = '<option value="">— Global —</option>';
-  clientes.forEach(c=>{ sel.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nome)}</option>`; });
-  
-  let filtro = document.getElementById('filtro-cliente-preco');
-  let valorAtual = filtro.value;
-  filtro.innerHTML = '<option value="">Todos os clientes</option>';
-  clientes.forEach(c=>{ filtro.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nome)}</option>`; });
-  filtro.value = valorAtual;
-}
-
-function atualizarSeletorPrecos() {
-  let clienteId = document.getElementById('f-cliente').value;
-  let tipo = document.getElementById('f-tipo').value;
-  let precosFiltrados = precos.filter(p=> (p.clienteId===clienteId || !p.clienteId) && p.tipo===tipo);
-  let sel = document.getElementById('f-preco-sel');
-  sel.innerHTML = '<option value="">— Selecionar —</option>';
-  precosFiltrados.forEach(p=>{ sel.innerHTML+=`<option value="${p.id}">${escapeHtml(p.nome)} — R$ ${fmt(p.valor)}</option>`; });
-}
-
-function aplicarPrecoTabela() { 
-  let id=document.getElementById('f-preco-sel').value; 
-  let p=precos.find(x=>x.id===id); 
-  if(p){ 
-    document.getElementById('f-nome').value=p.nome; 
-    document.getElementById('f-valor').value=p.valor; 
-  }
-}
-
-// MODAL TRABALHO
-function openModal(id) {
-  document.getElementById('modal-trabalho').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  
-  let selCliente = document.getElementById('f-cliente');
-  selCliente.innerHTML = '<option value="">— Selecionar —</option>';
-  clientes.forEach(c=>{ selCliente.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nome)}</option>`; });
-  
-  document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
-  document.getElementById('modal-title-text').textContent = id ? '🖌️ Editar Trabalho' : '🖌️ Novo Trabalho';
-  
-  // Reset validação
-  document.querySelectorAll('#modal-trabalho input, #modal-trabalho select').forEach(el=>el.classList.remove('error'));
-  
-  if(!id) { 
-    document.getElementById('edit-id').value=''; 
-    selectType('analog'); 
-    document.getElementById('f-nome').value=''; 
-    document.getElementById('f-valor').value=''; 
-    document.getElementById('f-status').value='pendente'; 
-    document.getElementById('f-paciente').value=''; 
-    document.getElementById('f-desc').value=''; 
-    document.getElementById('f-data-entrega').value=''; 
-    document.getElementById('f-elementos').value=''; 
-    document.getElementById('f-valor-elemento').value=''; 
-    document.getElementById('f-cliente').value=''; 
-  } else { 
-    let t=trabalhos.find(x=>x.id===id); 
-    if(t){ 
-      document.getElementById('edit-id').value=t.id; 
-      selectType(t.tipo); 
-      document.getElementById('f-nome').value=t.nome||''; 
-      document.getElementById('f-valor').value=t.valor||''; 
-      document.getElementById('f-status').value=t.status||'pendente'; 
-      document.getElementById('f-paciente').value=t.paciente||''; 
-      document.getElementById('f-desc').value=t.desc||''; 
-      document.getElementById('f-data-entrega').value=t.dataEntrega||''; 
-      document.getElementById('f-elementos').value=t.elementos||''; 
-      document.getElementById('f-valor-elemento').value=t.valorElemento||''; 
-      document.getElementById('f-cliente').value=t.clienteId||''; 
-      document.getElementById('f-data').value=t.data||''; 
-      atualizarSeletorPrecos(); 
-    } 
-  }
-}
-
-function closeModal() { 
-  document.getElementById('modal-trabalho').classList.remove('open'); 
-  document.body.style.overflow = '';
-}
-
-function selectType(tipo){
-  document.getElementById('f-tipo').value=tipo;
-  document.getElementById('opt-analog').className='type-option'+(tipo==='analog'?' selected analog':'');
-  document.getElementById('opt-digital').className='type-option'+(tipo==='digital'?' selected digital':'');
-  let isDigital=tipo==='digital';
-  document.getElementById('grupo-elementos').style.display=isDigital?'block':'none';
-  document.getElementById('grupo-valor-elemento').style.display=isDigital?'block':'none';
-  atualizarSeletorPrecos();
-}
-
-function calcValorDigital(){ 
-  let qtd=parseFloat(document.getElementById('f-elementos').value)||0; 
-  let vpe=parseFloat(document.getElementById('f-valor-elemento').value)||0; 
-  if(qtd&&vpe) document.getElementById('f-valor').value=(qtd*vpe).toFixed(2); 
-}
-
-async function saveTrabalho(){
-  const btn = document.getElementById('btn-save-trabalho');
-  btn.classList.add('loading');
-  btn.disabled = true;
-  
-  try {
-    let id=document.getElementById('edit-id').value;
-    let nome = sanitizeInput(document.getElementById('f-nome').value);
-    let clienteId = document.getElementById('f-cliente').value;
-    let valor = parseFloat(document.getElementById('f-valor').value)||0;
-    
-    // Validação visual
-    let hasError = false;
-    if(!nome) {
-      document.getElementById('f-nome').classList.add('error');
-      hasError = true;
-    }
-    if(!clienteId) {
-      document.getElementById('f-cliente').classList.add('error');
-      hasError = true;
-    }
-    if(valor <= 0) {
-      document.getElementById('f-valor').classList.add('error');
-      hasError = true;
-    }
-    
-    if(hasError) {
-      showToast('Preencha os campos obrigatórios corretamente', 'error');
-      return;
-    }
-    
-    let obj={ 
-      id:id||uid(), 
-      nome: nome, 
-      paciente: sanitizeInput(document.getElementById('f-paciente').value), 
-      valor: valor, 
-      tipo: document.getElementById('f-tipo').value, 
-      status: document.getElementById('f-status').value, 
-      data: document.getElementById('f-data').value, 
-      dataEntrega: document.getElementById('f-data-entrega').value, 
-      desc: sanitizeInput(document.getElementById('f-desc').value), 
-      clienteId: clienteId, 
-      elementos:parseInt(document.getElementById('f-elementos').value)||0, 
-      valorElemento:parseFloat(document.getElementById('f-valor-elemento').value)||0, 
-      criadoEm: id ? (trabalhos.find(t=>t.id===id)?.criadoEm || Date.now()) : Date.now()
-    };
-    
-    await saveTrabalhoFB(obj);
-    closeModal();
-    showToast(id ? 'Trabalho atualizado!' : 'Trabalho criado!', 'success');
-  } catch(e) {
-    showToast('Erro ao salvar. Tente novamente.', 'error');
-    console.error(e);
-  } finally {
-    btn.classList.remove('loading');
-    btn.disabled = false;
-  }
-}
-
-function deleteTrabalho(id){ 
-  showConfirm('Excluir Trabalho', 'Tem certeza que deseja excluir este trabalho? Esta ação não pode ser desfeita.', '🗑️', async ()=>{
-    try {
-      await deleteTrabalhoFB(id);
-      showToast('Trabalho excluído', 'success');
-    } catch(e) {
-      showToast('Erro ao excluir', 'error');
-    }
-  });
-}
-
-// CLIENTE MODAL
-function openClienteModal(id){
-  document.getElementById('modal-cliente').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  document.getElementById('modal-cliente').querySelector('.modal-title').textContent = id ? '👤 Editar Cliente' : '👤 Novo Cliente';
-  
-  document.querySelectorAll('#modal-cliente input').forEach(el=>el.classList.remove('error'));
-  
-  if(!id){ 
-    document.getElementById('ce-id').value=''; 
-    document.getElementById('ce-nome').value=''; 
-    document.getElementById('ce-contato').value=''; 
-    document.getElementById('ce-social').value=''; 
-    document.getElementById('ce-obs').value=''; 
-  } else{ 
-    let c=clientes.find(x=>x.id===id); 
-    if(c){ 
-      document.getElementById('ce-id').value=c.id; 
-      document.getElementById('ce-nome').value=c.nome||''; 
-      document.getElementById('ce-contato').value=c.contato||''; 
-      document.getElementById('ce-social').value=c.social||''; 
-      document.getElementById('ce-obs').value=c.obs||''; 
-    } 
-  }
-}
-
-function closeClienteModal(){ 
-  document.getElementById('modal-cliente').classList.remove('open'); 
-  document.body.style.overflow = '';
-}
-
-async function saveCliente(){
-  const btn = document.getElementById('btn-save-cliente');
-  btn.classList.add('loading');
-  btn.disabled = true;
-  
-  try {
-    let id=document.getElementById('ce-id').value;
-    let nome = sanitizeInput(document.getElementById('ce-nome').value);
-    
-    if(!nome){ 
-      document.getElementById('ce-nome').classList.add('error');
-      showToast('Nome é obrigatório', 'error');
-      return; 
-    }
-    
-    let obj={ 
-      id:id||uid(), 
-      nome: nome, 
-      contato: sanitizeInput(document.getElementById('ce-contato').value), 
-      social: sanitizeInput(document.getElementById('ce-social').value), 
-      obs: sanitizeInput(document.getElementById('ce-obs').value),
-      atualizadoEm: Date.now()
-    };
-    
-    await saveClienteFB(obj);
-    closeClienteModal();
-    popularSelectClientesPreco();
-    atualizarSeletorPrecos();
-    showToast(id ? 'Cliente atualizado!' : 'Cliente cadastrado!', 'success');
-  } catch(e) {
-    showToast('Erro ao salvar cliente', 'error');
-  } finally {
-    btn.classList.remove('loading');
-    btn.disabled = false;
-  }
-}
-
-function deleteCliente(id){ 
-  const temTrabalhos = trabalhos.some(t=>t.clienteId===id);
-  if(temTrabalhos) {
-    showToast('Não é possível excluir cliente com trabalhos vinculados', 'error');
-    return;
-  }
-  
-  showConfirm('Excluir Cliente', 'Deseja realmente excluir este cliente?', '👤', async ()=>{
-    try {
-      await deleteClienteFB(id);
-      showToast('Cliente excluído', 'success');
-    } catch(e) {
-      showToast('Erro ao excluir', 'error');
-    }
-  });
-}
-
-// PREÇO MODAL
-function openPrecoModal(id){
-  document.getElementById('modal-preco').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  document.getElementById('modal-preco').querySelector('.modal-title').textContent = id ? '◑ Editar Preço' : '◑ Novo Preço';
-  
-  popularSelectClientesPreco();
-  document.querySelectorAll('#modal-preco input, #modal-preco select').forEach(el=>el.classList.remove('error'));
-  
-  if(!id){ 
-    document.getElementById('pr-id').value=''; 
-    document.getElementById('pr-nome').value=''; 
-    document.getElementById('pr-valor').value=''; 
-    document.getElementById('pr-obs').value=''; 
-    document.getElementById('pr-tipo').value='analog'; 
-    document.getElementById('pr-cliente').value=''; 
-  } else{ 
-    let p=precos.find(x=>x.id===id); 
-    if(p){ 
-      document.getElementById('pr-id').value=p.id; 
-      document.getElementById('pr-nome').value=p.nome||''; 
-      document.getElementById('pr-valor').value=p.valor||''; 
-      document.getElementById('pr-obs').value=p.obs||''; 
-      document.getElementById('pr-tipo').value=p.tipo||'analog'; 
-      document.getElementById('pr-cliente').value=p.clienteId||''; 
-    } 
-  }
-}
-
-function closePrecoModal(){ 
-  document.getElementById('modal-preco').classList.remove('open'); 
-  document.body.style.overflow = '';
-}
-
-async function savePreco(){
-  const btn = document.getElementById('btn-save-preco');
-  btn.classList.add('loading');
-  btn.disabled = true;
-  
-  try {
-    let id=document.getElementById('pr-id').value;
-    let nome = sanitizeInput(document.getElementById('pr-nome').value);
-    let valor = parseFloat(document.getElementById('pr-valor').value);
-    
-    let hasError = false;
-    if(!nome) {
-      document.getElementById('pr-nome').classList.add('error');
-      hasError = true;
-    }
-    if(!valor || valor <= 0) {
-      document.getElementById('pr-valor').classList.add('error');
-      hasError = true;
-    }
-    
-    if(hasError) {
-      showToast('Preencha os campos obrigatórios', 'error');
-      return;
-    }
-    
-    let obj={ 
-      id:id||uid(), 
-      nome: nome, 
-      valor: valor, 
-      tipo: document.getElementById('pr-tipo').value, 
-      obs: sanitizeInput(document.getElementById('pr-obs').value), 
-      clienteId: document.getElementById('pr-cliente').value||null,
-      atualizadoEm: Date.now()
-    };
-    
-    await savePrecoFB(obj);
-    closePrecoModal();
-    showToast(id ? 'Preço atualizado!' : 'Preço cadastrado!', 'success');
-  } catch(e) {
-    showToast('Erro ao salvar preço', 'error');
-  } finally {
-    btn.classList.remove('loading');
-    btn.disabled = false;
-  }
-}
-
-function deletePreco(id){ 
-  showConfirm('Excluir Preço', 'Deseja remover este preço da tabela?', '💲', async ()=>{
-    try {
-      await deletePrecoFB(id);
-      showToast('Preço excluído', 'success');
-    } catch(e) {
-      showToast('Erro ao excluir', 'error');
-    }
-  });
-}
-
-// BACKUP
-function exportarBackup(){ 
-  let dados={versao:'2.0',exportadoEm:new Date().toISOString(),trabalhos,clientes,precos,metaMensal}; 
-  let a=document.createElement('a'); 
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(dados,null,2)],{type:'application/json'})); 
-  a.download=`labstudio_backup_${new Date().toISOString().slice(0,10)}.json`; 
-  a.click();
-  showToast('Backup exportado!', 'success');
-}
-
-function importarBackup(event){ 
-  let file=event.target.files[0]; 
-  if(!file) return; 
-  
-  showConfirm('Importar Backup', 'Isso substituirá todos os dados atuais. Deseja continuar?', '⚠️', async ()=>{
-    let reader=new FileReader(); 
-    reader.onload=async e=>{ 
-      try{ 
-        let dados=JSON.parse(e.target.result); 
-        if(!dados.trabalhos || !dados.clientes) throw new Error('Formato inválido');
-        
-        for(let c of dados.clientes) await saveClienteFB(c); 
-        for(let t of dados.trabalhos) await saveTrabalhoFB(t); 
-        for(let p of (dados.precos||[])) await savePrecoFB(p);
-        if(dados.metaMensal) metaMensal = dados.metaMensal;
-        
-        showToast('Backup importado com sucesso!', 'success');
-      }catch(err){ 
-        showToast('Arquivo de backup inválido', 'error');
-        console.error(err);
-      } 
-    }; 
-    reader.readAsText(file);
-  });
-  event.target.value = '';
-}
-
-// EXPORT PDF
-function exportClientePDF(clienteId){ 
-  let c=clientes.find(x=>x.id===clienteId); 
-  if(!c) return; 
-  
-  let dataIni=prompt('Data inicial (AAAA-MM-DD):', new Date().toISOString().slice(0,7)+'-01'); 
-  if(!dataIni) return; 
-  let dataFim=prompt('Data final (AAAA-MM-DD):', new Date().toISOString().slice(0,10)); 
-  if(!dataFim) return; 
-  
-  let works=trabalhos.filter(t=>t.clienteId===clienteId && t.data>=dataIni && t.data<=dataFim); 
-  let {jsPDF}=window.jspdf; 
-  let doc=new jsPDF(); 
-  
-  doc.setFont('helvetica'); 
-  doc.setFontSize(20);
-  doc.text(`LAB.STUDIO`,20,20); 
-  doc.setFontSize(14);
-  doc.text(`Relatório: ${c.nome}`,20,30); 
-  doc.setFontSize(10);
-  doc.text(`Período: ${formatDate(dataIni)} a ${formatDate(dataFim)}`,20,38); 
-  
-  let total=works.reduce((s,t)=>s+(parseFloat(t.valor)||0),0); 
-  doc.setFontSize(12);
-  doc.text(`Total: R$ ${fmt(total)}`,20,48); 
-  
-  doc.autoTable({
-    startY:55,
-    head:[['Trabalho','Tipo','Status','Valor','Data']],
-    body:works.map(t=>[t.nome,t.tipo==='analog'?'Analógico':'Digital',statusLabel(t.status),`R$ ${fmt(t.valor)}`,formatDate(t.data)]),
-    theme: 'grid',
-    headStyles: { fillColor: [20,20,25], textColor: [255,159,67] },
-    styles: { font: 'helvetica', fontSize: 10 }
-  }); 
-  
-  doc.save(`labstudio_${c.nome.replace(/\s+/g,'_')}.pdf`);
-  showToast('PDF gerado!', 'success');
-}
-
-// SWITCH TAB
-function switchTab(tab){
-  document.querySelectorAll('.tab').forEach((t,i)=>{ 
-    let pages=['dashboard','trabalhos','clientes','precos']; 
-    t.classList.toggle('active',pages[i]===tab); 
-  });
-  document.querySelectorAll('.page').forEach(p=>{ 
-    p.classList.toggle('active',p.id===`page-${tab}`); 
-  });
-  if(tab==='trabalhos') renderTrabalhos();
-  if(tab==='clientes') renderClientes();
-  if(tab==='dashboard') renderDashboard();
-  if(tab==='precos') { renderPrecos(); popularSelectClientesPreco(); }
-}
-
-function updateBadges(){
-  document.getElementById('badge-trabalhos').textContent=trabalhos.length;
-  document.getElementById('badge-clientes').textContent=clientes.length;
-  document.getElementById('badge-precos').textContent=precos.length;
-}
-
-// INICIALIZAÇÃO
-window._appReady=false;
-window.switchTab=switchTab; 
-window.setFilterTrab=setFilterTrab; 
-window.openModal=openModal; 
-window.closeModal=closeModal; 
-window.selectType=selectType; 
-window.calcValorDigital=calcValorDigital; 
-window.saveTrabalho=saveTrabalho; 
-window.deleteTrabalho=deleteTrabalho; 
-window.openClienteModal=openClienteModal; 
-window.closeClienteModal=closeClienteModal; 
-window.saveCliente=saveCliente; 
-window.deleteCliente=deleteCliente; 
-window.exportClientePDF=exportClientePDF; 
-window.exportarBackup=exportarBackup; 
-window.importarBackup=importarBackup; 
-window.renderDashboard=renderDashboard; 
-window.renderTrabalhos=renderTrabalhos; 
-window.renderClientes=renderClientes; 
-window.renderPrecos=renderPrecos; 
-window.openPrecoModal=openPrecoModal; 
-window.closePrecoModal=closePrecoModal; 
-window.savePreco=savePreco; 
-window.deletePreco=deletePreco; 
-window.atualizarSeletorPrecos=atualizarSeletorPrecos; 
-window.aplicarPrecoTabela=aplicarPrecoTabela; 
-window.definirMeta=definirMeta; 
-window.toggleGroup=toggleGroup;
-window.updateBadges=updateBadges;
-window.debounceRenderTrabalhos=debounceRenderTrabalhos;
-window.debounceRenderClientes=debounceRenderClientes;
-window.debounceRenderPrecos=debounceRenderPrecos;
-window.showConfirm=showConfirm;
-window.closeConfirmModal=closeConfirmModal;
-
-// Prevenir scroll quando modal aberto
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeModal();
-    closeClienteModal();
-    closePrecoModal();
-    closeConfirmModal();
-  }
-});
-</script>
-</body>
-</html>
+     
