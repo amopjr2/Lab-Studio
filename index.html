@@ -864,6 +864,15 @@ onAuthStateChanged(auth, user => {
 
     <div style="margin-top: 20px">
       <div class="section-header" style="margin-bottom:12px">
+        <div class="section-title">📅 Próximas Entregas</div>
+      </div>
+      <div class="panel" id="proximas-panel">
+        <div class="empty"><div class="empty-icon">📅</div>Nenhuma entrega agendada</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px">
+      <div class="section-header" style="margin-bottom:12px">
         <div class="section-title">Recentes</div>
       </div>
       <div class="panel" id="recent-panel">
@@ -1021,13 +1030,30 @@ onAuthStateChanged(auth, user => {
       </div>
 
       <div class="form-group">
-        <label>Data</label>
+        <label>Qtd. de Itens</label>
+        <input type="number" id="f-qtd" placeholder="1" min="1" step="1" value="1" oninput="calcValorTotal()">
+      </div>
+
+      <div class="form-group">
+        <label>Data de Entrada</label>
         <input type="date" id="f-data">
+      </div>
+
+      <div class="form-group">
+        <label>Data de Entrega</label>
+        <input type="date" id="f-data-entrega">
       </div>
 
       <div class="form-group full">
         <label>Descrição / Observações</label>
         <textarea id="f-desc" placeholder="Dimensões, referências, detalhes do pedido..."></textarea>
+      </div>
+
+      <!-- Múltiplos itens — só aparece em novo trabalho -->
+      <div class="form-group full" id="grupo-itens-extra" style="display:none">
+        <label>Itens da Requisição</label>
+        <div id="itens-lista" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+        <button type="button" onclick="adicionarItem()" style="margin-top:8px;background:none;border:1px dashed var(--border);color:var(--text-muted);padding:8px;border-radius:7px;width:100%;cursor:pointer;font-family:var(--font-body);font-size:13px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-analog)';this.style.color='var(--accent-analog)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">+ Adicionar outro item</button>
       </div>
 
     </div>
@@ -1373,17 +1399,22 @@ function openModal(id) {
   // default date
   if (!id) {
     document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('f-data-entrega').value = '';
     document.getElementById('modal-title-text').textContent = '🖌️ Novo Trabalho';
     document.getElementById('edit-id').value = '';
     selectType('analog');
     document.getElementById('f-nome').value = '';
     document.getElementById('f-paciente').value = '';
     document.getElementById('f-valor').value = '';
+    document.getElementById('f-qtd').value = '1';
     document.getElementById('f-elementos').value = '';
     document.getElementById('f-valor-elemento').value = '';
     document.getElementById('f-status').value = 'pendente';
     document.getElementById('f-desc').value = '';
     document.getElementById('f-cliente').value = '';
+    // mostrar itens extras só em novo
+    document.getElementById('grupo-itens-extra').style.display = '';
+    document.getElementById('itens-lista').innerHTML = '';
   } else {
     const t = trabalhos.find(x => x.id === id);
     if (!t) return;
@@ -1393,12 +1424,17 @@ function openModal(id) {
     document.getElementById('f-nome').value = t.nome;
     document.getElementById('f-paciente').value = t.paciente || '';
     document.getElementById('f-valor').value = t.valor;
+    document.getElementById('f-qtd').value = t.qtd || 1;
     document.getElementById('f-elementos').value = t.elementos || '';
     document.getElementById('f-valor-elemento').value = t.valorElemento || '';
     document.getElementById('f-status').value = t.status;
     document.getElementById('f-data').value = t.data;
+    document.getElementById('f-data-entrega').value = t.dataEntrega || '';
     document.getElementById('f-desc').value = t.desc || '';
     document.getElementById('f-cliente').value = t.clienteId || '';
+    // esconder itens extras na edição
+    document.getElementById('grupo-itens-extra').style.display = 'none';
+    document.getElementById('itens-lista').innerHTML = '';
   }
 }
 
@@ -1432,16 +1468,43 @@ function calcValorDigital() {
   }
 }
 
+function calcValorTotal() {
+  // Recalcula se valor por elemento definido
+  const qtdElem = parseFloat(document.getElementById('f-elementos')?.value) || 0;
+  const vpe     = parseFloat(document.getElementById('f-valor-elemento')?.value) || 0;
+  if (qtdElem > 0 && vpe > 0) {
+    document.getElementById('f-valor').value = (qtdElem * vpe).toFixed(2);
+  }
+}
+
+let itemExtraCount = 0;
+function adicionarItem() {
+  itemExtraCount++;
+  const lista = document.getElementById('itens-lista');
+  const div = document.createElement('div');
+  div.className = 'item-extra-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center';
+  div.innerHTML = `
+    <input class="item-extra-nome" type="text" placeholder="Nome do item" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;">
+    <input class="item-extra-qtd" type="number" placeholder="Qtd" min="1" value="1" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:60px">
+    <input class="item-extra-valor" type="number" placeholder="R$" step="0.01" min="0" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:80px">
+    <button onclick="this.parentElement.remove()" style="background:none;border:1px solid var(--border);color:var(--red);padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px">✕</button>
+  `;
+  lista.appendChild(div);
+}
+
 async function saveTrabalho() {
-  const nome     = document.getElementById('f-nome').value.trim();
-  const paciente = document.getElementById('f-paciente').value.trim();
-  const valor    = parseFloat(document.getElementById('f-valor').value) || 0;
-  const tipo     = document.getElementById('f-tipo').value;
-  const status   = document.getElementById('f-status').value;
-  const data     = document.getElementById('f-data').value;
-  const desc     = document.getElementById('f-desc').value.trim();
-  const clienteId = document.getElementById('f-cliente').value;
-  const editId   = document.getElementById('edit-id').value;
+  const nome        = document.getElementById('f-nome').value.trim();
+  const paciente    = document.getElementById('f-paciente').value.trim();
+  const valor       = parseFloat(document.getElementById('f-valor').value) || 0;
+  const qtd         = parseInt(document.getElementById('f-qtd').value) || 1;
+  const tipo        = document.getElementById('f-tipo').value;
+  const status      = document.getElementById('f-status').value;
+  const data        = document.getElementById('f-data').value;
+  const dataEntrega = document.getElementById('f-data-entrega').value;
+  const desc        = document.getElementById('f-desc').value.trim();
+  const clienteId   = document.getElementById('f-cliente').value;
+  const editId      = document.getElementById('edit-id').value;
   const elementos     = tipo === 'digital' ? (parseInt(document.getElementById('f-elementos').value) || 0) : 0;
   const valorElemento = tipo === 'digital' ? (parseFloat(document.getElementById('f-valor-elemento').value) || 0) : 0;
 
@@ -1449,15 +1512,26 @@ async function saveTrabalho() {
 
   if (editId) {
     const existing = trabalhos.find(x => x.id === editId);
-    const updated = { ...(existing||{}), id: editId, nome, paciente, valor, tipo, status, data, desc, clienteId, elementos, valorElemento };
+    const updated = { ...(existing||{}), id: editId, nome, paciente, valor, qtd, tipo, status, data, dataEntrega, desc, clienteId, elementos, valorElemento };
     await saveTrabalhoFB(updated);
   } else {
-    const novo = { id: uid(), nome, paciente, valor, tipo, status, data, desc, clienteId, elementos, valorElemento, criadoEm: Date.now() };
-    await saveTrabalhoFB(novo);
+    // Salva item principal
+    const principal = { id: uid(), nome, paciente, valor, qtd, tipo, status, data, dataEntrega, desc, clienteId, elementos, valorElemento, criadoEm: Date.now() };
+    await saveTrabalhoFB(principal);
+
+    // Salva itens extras se houver
+    const linhas = document.querySelectorAll('.item-extra-row');
+    for (const linha of linhas) {
+      const nomeExtra  = linha.querySelector('.item-extra-nome')?.value?.trim();
+      const valorExtra = parseFloat(linha.querySelector('.item-extra-valor')?.value) || 0;
+      const qtdExtra   = parseInt(linha.querySelector('.item-extra-qtd')?.value) || 1;
+      if (nomeExtra) {
+        await saveTrabalhoFB({ id: uid(), nome: nomeExtra, paciente, valor: valorExtra, qtd: qtdExtra, tipo, status, data, dataEntrega, desc, clienteId, elementos: 0, valorElemento: 0, criadoEm: Date.now() + 1 });
+      }
+    }
   }
 
   closeModal();
-  // render é disparado pelo listener onSnapshot automaticamente
 }
 
 async function deleteTrabalho(id) {
@@ -1565,14 +1639,25 @@ function renderTrabalhos() {
   // Renderiza grupo de cada cliente
   const renderGrupo = (nomeGrupo, trabalhosList) => {
     const totalGrupo = trabalhosList.reduce((s,t)=>s+t.valor,0);
+    const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
     const cards = trabalhosList.map(t => {
       const elemInfo = t.tipo === 'digital' && t.elementos
         ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
         : '';
+      const qtdInfo = t.qtd && t.qtd > 1
+        ? `<span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--text-muted)">×${t.qtd}</span>`
+        : '';
+      const entregaInfo = t.dataEntrega ? (() => {
+        const d = new Date(t.dataEntrega + 'T00:00:00');
+        const diff = Math.round((d - hoje0) / 86400000);
+        const cor = diff < 0 ? 'var(--red)' : diff <= 2 ? '#fbbf24' : 'var(--text-muted)';
+        const label = diff < 0 ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Entrega: ${formatDate(t.dataEntrega)}`;
+        return `<div style="font-size:11px;font-weight:600;color:${cor};margin-top:4px">📅 ${label}</div>`;
+      })() : '';
       return `<div class="trabalho-card ${t.tipo}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
           <div>
-            <div class="trabalho-card-nome">${t.nome}</div>
+            <div class="trabalho-card-nome">${t.nome} ${qtdInfo}</div>
             ${t.paciente ? `<div class="trabalho-card-paciente">Paciente: ${t.paciente}</div>` : ''}
           </div>
           <span class="status-badge ${t.status}" style="white-space:nowrap;font-size:10px">${statusLabel(t.status)}</span>
@@ -1581,9 +1666,10 @@ function renderTrabalhos() {
           <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 7px">${t.tipo==='analog'?'Analógico':'Digital'}</span>
           ${elemInfo}
         </div>
+        ${entregaInfo}
         <div class="trabalho-card-row">
           <span class="trabalho-card-valor">R$ ${fmt(t.valor)}</span>
-          <span class="trabalho-card-data">${formatDate(t.data)}</span>
+          <span class="trabalho-card-data">Entrada: ${formatDate(t.data)}</span>
         </div>
         <div class="trabalho-card-actions">
           <button class="action-btn" onclick="openModal('${t.id}')" style="flex:1;text-align:center">✎ Editar</button>
@@ -1725,8 +1811,37 @@ function renderDashboard() {
       </div>
     </div>`).join('');
 
-  // recentes
-  const recent = [...trabalhos].sort((a,b)=>b.criadoEm-a.criadoEm).slice(0,6);
+  // próximas entregas — trabalhos com dataEntrega futura, não pagos/cancelados
+  const hoje3 = new Date().toISOString().split('T')[0];
+  const proximas = trabalhos
+    .filter(t => t.dataEntrega && t.dataEntrega >= hoje3 && !['pago','cancelado'].includes(t.status))
+    .sort((a,b) => a.dataEntrega.localeCompare(b.dataEntrega))
+    .slice(0, 8);
+
+  const proximasPanel = document.getElementById('proximas-panel');
+  if (!proximas.length) {
+    proximasPanel.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Nenhuma entrega agendada</div>';
+  } else {
+    const hoje4 = new Date(); hoje4.setHours(0,0,0,0);
+    proximasPanel.innerHTML = proximas.map(t => {
+      const c = clientes.find(x=>x.id===t.clienteId);
+      const entrega = new Date(t.dataEntrega + 'T00:00:00');
+      const diff = Math.round((entrega - hoje4) / 86400000);
+      const urgente = diff <= 2;
+      const diffLabel = diff === 0 ? '🔴 Hoje!' : diff === 1 ? '🟡 Amanhã' : `${diff} dias`;
+      return `<div class="panel-row" style="${urgente?'background:rgba(248,113,113,0.05)':''}">
+        <div>
+          <span class="name">${t.nome}</span>
+          ${c ? `<span style="font-size:11px;color:var(--text-muted);margin-left:6px">${c.nome}</span>` : ''}
+          <br><span class="status-badge ${t.status}" style="font-size:10px;padding:2px 7px;margin-top:4px;display:inline-block">${statusLabel(t.status)}</span>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:700;color:${urgente?'var(--red)':'var(--text-muted)'}">${diffLabel}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${formatDate(t.dataEntrega)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
   const rPanel = document.getElementById('recent-panel');
   if (!recent.length) {
     rPanel.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhum trabalho ainda</div>';
@@ -2068,6 +2183,8 @@ window.deletePreco       = deletePreco;
 window.renderPrecos      = renderPrecos;
 window.aplicarPrecoTabela = aplicarPrecoTabela;
 window.updateBadgePrecos = updateBadgePrecos;
+window.calcValorTotal    = calcValorTotal;
+window.adicionarItem     = adicionarItem;
 window.popularSeletorPrecos = popularSeletorPrecos;
 </script>
 
