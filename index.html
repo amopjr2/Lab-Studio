@@ -1019,7 +1019,23 @@ onAuthStateChanged(auth, user => {
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }
-  
+  /* Forçar cores nos campos dos modais */
+.modal input,
+.modal select,
+.modal textarea,
+.modal .preco-card {
+    background: #141419 !important;
+    color: #f1f1f4 !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Especificamente para os selects dentro do modal de trabalho */
+#modal-trabalho select,
+#modal-trabalho input,
+#modal-trabalho textarea {
+    background: #141419 !important;
+    color: #f1f1f4 !important;
+}
   /* Skeleton Loading */
   .skeleton {
     background: linear-gradient(90deg, var(--surface) 25%, rgba(255,255,255,0.05) 50%, var(--surface) 75%);
