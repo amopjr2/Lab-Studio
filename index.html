@@ -609,31 +609,67 @@ onAuthStateChanged(auth, user => {
     .modal-overlay { align-items: flex-end; }
   }
 
-  /* Cards de trabalho por cliente */
-  .cliente-grupo { margin-bottom: 24px; }
-  .cliente-grupo-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px; padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-  .cliente-grupo-nome {
-    font-size: 15px; font-weight: 700; color: var(--text);
-    font-family: var(--font-display);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .cliente-grupo-total {
-    font-family: var(--font-mono); font-size: 13px;
-    color: var(--text-muted);
-  }
-  .trabalho-cards-grid {
+  /* Cards de trabalho por cliente - NOVO LAYOUT EM COLUNAS */
+  .trabalhos-colunas {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    align-items: start;
   }
-  .trabalho-card {
+
+  .cliente-coluna {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color .2s;
+    height: fit-content;
+  }
+
+  .cliente-coluna:hover {
+    border-color: var(--text-muted);
+  }
+
+  .cliente-coluna-header {
+    background: var(--surface2);
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cliente-coluna-nome {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cliente-coluna-total {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--green);
+    background: rgba(74,222,128,0.1);
+    padding: 4px 8px;
+    border-radius: 20px;
+  }
+
+  .trabalhos-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .trabalho-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     padding: 14px;
     transition: border-color .2s, transform .15s;
     position: relative;
@@ -1589,7 +1625,7 @@ async function deleteCliente(id) {
   await deleteClienteFB(id);
 }
 
-// ─── RENDER TRABALHOS ────────────────────────────────
+// ─── RENDER TRABALHOS (NOVO LAYOUT EM COLUNAS) ────────────────
 function renderTrabalhos() {
   const q   = (document.getElementById('search-trabalhos').value || '').toLowerCase();
   const container = document.getElementById('trabalhos-cards-container');
@@ -1634,13 +1670,33 @@ function renderTrabalhos() {
     }
   });
 
-  let html = '';
+  // Ordenar trabalhos dentro de cada grupo por data de entrada (mais recente primeiro)
+  const ordenarPorData = (trabalhosArray) => {
+    return trabalhosArray.sort((a,b) => (b.data || '').localeCompare(a.data || ''));
+  };
 
-  // Renderiza grupo de cada cliente
-  const renderGrupo = (nomeGrupo, trabalhosList) => {
-    const totalGrupo = trabalhosList.reduce((s,t)=>s+t.valor,0);
-    const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
-    const cards = trabalhosList.map(t => {
+  // Construir HTML com grid de colunas (um cliente por coluna)
+  let html = '<div class="trabalhos-colunas">';
+
+  // Clientes com trabalhos
+  Object.keys(grupos).forEach(cid => {
+    const c = clientes.find(x => x.id === cid);
+    const nomeCliente = c ? c.nome : 'Cliente removido';
+    const trabalhosDoCliente = ordenarPorData(grupos[cid]);
+    const totalCliente = trabalhosDoCliente.reduce((s,t)=>s+t.valor,0);
+
+    html += `<div class="cliente-coluna">
+      <div class="cliente-coluna-header">
+        <div class="cliente-coluna-nome">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
+          ${nomeCliente}
+          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosDoCliente.length})</span>
+        </div>
+        <div class="cliente-coluna-total">R$ ${fmt(totalCliente)}</div>
+      </div>
+      <div class="trabalhos-vertical">`;
+
+    trabalhosDoCliente.forEach(t => {
       const elemInfo = t.tipo === 'digital' && t.elementos
         ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
         : '';
@@ -1648,13 +1704,15 @@ function renderTrabalhos() {
         ? `<span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--text-muted)">×${t.qtd}</span>`
         : '';
       const entregaInfo = t.dataEntrega ? (() => {
+        const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
         const d = new Date(t.dataEntrega + 'T00:00:00');
         const diff = Math.round((d - hoje0) / 86400000);
         const cor = diff < 0 ? 'var(--red)' : diff <= 2 ? '#fbbf24' : 'var(--text-muted)';
         const label = diff < 0 ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Entrega: ${formatDate(t.dataEntrega)}`;
         return `<div style="font-size:11px;font-weight:600;color:${cor};margin-top:4px">📅 ${label}</div>`;
       })() : '';
-      return `<div class="trabalho-card ${t.tipo}">
+
+      html += `<div class="trabalho-card ${t.tipo}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
           <div>
             <div class="trabalho-card-nome">${t.nome} ${qtdInfo}</div>
@@ -1676,30 +1734,70 @@ function renderTrabalhos() {
           <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
         </div>
       </div>`;
-    }).join('');
+    });
 
-    return `<div class="cliente-grupo">
-      <div class="cliente-grupo-header">
-        <div class="cliente-grupo-nome">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
-          ${nomeGrupo}
-          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosList.length})</span>
-        </div>
-        <span class="cliente-grupo-total">R$ ${fmt(totalGrupo)}</span>
-      </div>
-      <div class="trabalho-cards-grid">${cards}</div>
-    </div>`;
-  };
-
-  // Clientes com trabalhos
-  Object.keys(grupos).forEach(cid => {
-    const c = clientes.find(x => x.id === cid);
-    html += renderGrupo(c ? c.nome : 'Cliente removido', grupos[cid]);
+    html += `</div></div>`;
   });
 
-  // Sem cliente
-  if (semCliente.length) html += renderGrupo('Sem cliente', semCliente);
+  // Sem cliente (se houver)
+  if (semCliente.length) {
+    const trabalhosSemCliente = ordenarPorData(semCliente);
+    const totalSemCliente = trabalhosSemCliente.reduce((s,t)=>s+t.valor,0);
+    html += `<div class="cliente-coluna">
+      <div class="cliente-coluna-header">
+        <div class="cliente-coluna-nome">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
+          Sem cliente
+          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosSemCliente.length})</span>
+        </div>
+        <div class="cliente-coluna-total">R$ ${fmt(totalSemCliente)}</div>
+      </div>
+      <div class="trabalhos-vertical">`;
 
+    trabalhosSemCliente.forEach(t => {
+      const elemInfo = t.tipo === 'digital' && t.elementos
+        ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
+        : '';
+      const qtdInfo = t.qtd && t.qtd > 1
+        ? `<span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--text-muted)">×${t.qtd}</span>`
+        : '';
+      const entregaInfo = t.dataEntrega ? (() => {
+        const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+        const d = new Date(t.dataEntrega + 'T00:00:00');
+        const diff = Math.round((d - hoje0) / 86400000);
+        const cor = diff < 0 ? 'var(--red)' : diff <= 2 ? '#fbbf24' : 'var(--text-muted)';
+        const label = diff < 0 ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Entrega: ${formatDate(t.dataEntrega)}`;
+        return `<div style="font-size:11px;font-weight:600;color:${cor};margin-top:4px">📅 ${label}</div>`;
+      })() : '';
+
+      html += `<div class="trabalho-card ${t.tipo}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div class="trabalho-card-nome">${t.nome} ${qtdInfo}</div>
+            ${t.paciente ? `<div class="trabalho-card-paciente">Paciente: ${t.paciente}</div>` : ''}
+          </div>
+          <span class="status-badge ${t.status}" style="white-space:nowrap;font-size:10px">${statusLabel(t.status)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 7px">${t.tipo==='analog'?'Analógico':'Digital'}</span>
+          ${elemInfo}
+        </div>
+        ${entregaInfo}
+        <div class="trabalho-card-row">
+          <span class="trabalho-card-valor">R$ ${fmt(t.valor)}</span>
+          <span class="trabalho-card-data">Entrada: ${formatDate(t.data)}</span>
+        </div>
+        <div class="trabalho-card-actions">
+          <button class="action-btn" onclick="openModal('${t.id}')" style="flex:1;text-align:center">✎ Editar</button>
+          <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
+        </div>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  }
+
+  html += `</div>`;
   container.innerHTML = html;
 }
 
@@ -1719,7 +1817,7 @@ function renderClientes() {
     const works = trabalhos.filter(t => t.clienteId === c.id);
     const total = works.reduce((s,t) => s+t.valor, 0);
     return `<tr>
-      <td><span class="client-id">#${String(i+1).padStart(3,'0')}</span></td>
+      <td style="font-family:'JetBrains Mono', monospace; color:var(--text-muted);">#${String(i+1).padStart(3,'0')}</td>
       <td><span class="client-name">${c.nome}</span>${c.social ? `<br><span style="font-size:11px;color:var(--accent-digital)">${c.social}</span>` : ''}</td>
       <td style="font-size:13px;color:var(--text-dim)">${c.contato || '—'}</td>
       <td><span class="money-cell">${fmt(total)}</span></td>
@@ -1842,6 +1940,8 @@ function renderDashboard() {
       </div>`;
     }).join('');
   }
+
+  const recent = [...trabalhos].sort((a,b)=>b.criadoEm-a.criadoEm).slice(0,8);
   const rPanel = document.getElementById('recent-panel');
   if (!recent.length) {
     rPanel.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhum trabalho ainda</div>';
