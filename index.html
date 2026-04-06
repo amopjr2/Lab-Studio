@@ -1129,12 +1129,39 @@ onAuthStateChanged(auth, user => {
   }
   
   /* Tabela */
+ .table-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow-x: auto;          /* ALTERADO: permite scroll horizontal */
+  overflow-y: hidden;        /* mantém vertical sem scroll */
+  -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
+}
+
+.table-wrap table {
+  min-width: 700px;          /* ADICIONADO: força largura mínima para scroll em mobile */
+  width: 100%;
+}
+
+/* Garante que as colunas de valor e ações não quebrem linha */
+td.money-cell,
+td:last-child {
+  white-space: nowrap;
+}
+
+/* Ajuste responsivo para não cortar conteúdo */
+@media (max-width: 768px) {
   .table-wrap {
-    background: var(--surface);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    overflow: hidden;
+    margin: 0 -20px;         /* compensa o padding do main em mobile */
+    border-radius: 0;        /* remove bordas arredondadas quando extrapola tela */
+    border-left: none;
+    border-right: none;
   }
+  
+  .table-wrap table {
+    min-width: 650px;        /* ajuste fino para telas menores */
+  }
+}
   
   table {
     width: 100%;
