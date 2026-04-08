@@ -609,67 +609,31 @@ onAuthStateChanged(auth, user => {
     .modal-overlay { align-items: flex-end; }
   }
 
-  /* Cards de trabalho por cliente - NOVO LAYOUT EM COLUNAS */
-  .trabalhos-colunas {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 24px;
-    align-items: start;
+  /* Cards de trabalho por cliente */
+  .cliente-grupo { margin-bottom: 24px; }
+  .cliente-grupo-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
   }
-
-  .cliente-coluna {
+  .cliente-grupo-nome {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    font-family: var(--font-display);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cliente-grupo-total {
+    font-family: var(--font-mono); font-size: 13px;
+    color: var(--text-muted);
+  }
+  .trabalho-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .trabalho-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
-    transition: border-color .2s;
-    height: fit-content;
-  }
-
-  .cliente-coluna:hover {
-    border-color: var(--text-muted);
-  }
-
-  .cliente-coluna-header {
-    background: var(--surface2);
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .cliente-coluna-nome {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .cliente-coluna-total {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--green);
-    background: rgba(74,222,128,0.1);
-    padding: 4px 8px;
-    border-radius: 20px;
-  }
-
-  .trabalhos-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-  }
-
-  .trabalho-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
     padding: 14px;
     transition: border-color .2s, transform .15s;
     position: relative;
@@ -704,6 +668,23 @@ onAuthStateChanged(auth, user => {
   .trabalho-card-actions {
     display: flex; gap: 6px; margin-top: 10px;
     padding-top: 10px; border-top: 1px solid var(--border);
+  }
+
+  .req-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+  }
+  .req-item-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    font-family: var(--font-display);
+  }
+  .req-item-grid {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: end;
   }
 
   /* Tabela de preços */
@@ -997,13 +978,15 @@ onAuthStateChanged(auth, user => {
 
 <!-- ── MODAL TRABALHO ── -->
 <div class="modal-overlay" id="modal-trabalho">
-  <div class="modal">
+  <div class="modal" style="width:600px">
     <button class="modal-close" onclick="closeModal()">✕</button>
     <div class="modal-title">
-      <span id="modal-title-text">🖌️ Novo Trabalho</span>
+      <span id="modal-title-text">🖌️ Nova Requisição</span>
     </div>
     <input type="hidden" id="edit-id">
-    <div class="form-grid">
+
+    <!-- Cabeçalho da requisição — comum a todos os itens -->
+    <div class="form-grid" style="margin-bottom:16px">
 
       <div class="form-group full">
         <label>Tipo de Trabalho</label>
@@ -1026,34 +1009,6 @@ onAuthStateChanged(auth, user => {
         <input type="text" id="f-paciente" placeholder="Ex: Maria Silva">
       </div>
 
-      <div class="form-group full">
-        <label>Tabela de Preços (opcional)</label>
-        <select id="f-preco-sel" onchange="aplicarPrecoTabela()">
-          <option value="">— Selecionar da tabela —</option>
-        </select>
-      </div>
-
-      <div class="form-group full">
-        <label>Trabalho</label>
-        <input type="text" id="f-nome" placeholder="Ex: Retrato A4 acrílico, Logo digital...">
-      </div>
-
-      <!-- Campos exclusivos digital -->
-      <div class="form-group" id="grupo-elementos" style="display:none">
-        <label>Qtd. de Elementos</label>
-        <input type="number" id="f-elementos" placeholder="0" min="0" step="1" oninput="calcValorDigital()">
-      </div>
-
-      <div class="form-group" id="grupo-valor-elemento" style="display:none">
-        <label>Valor por Elemento (R$)</label>
-        <input type="number" id="f-valor-elemento" placeholder="0,00" step="0.01" min="0" oninput="calcValorDigital()">
-      </div>
-
-      <div class="form-group" id="grupo-valor-label">
-        <label>Valor Total (R$)</label>
-        <input type="number" id="f-valor" placeholder="0,00" step="0.01" min="0">
-      </div>
-
       <div class="form-group">
         <label>Status</label>
         <select id="f-status">
@@ -1063,11 +1018,6 @@ onAuthStateChanged(auth, user => {
           <option value="pago">Pago ✓</option>
           <option value="cancelado">Cancelado</option>
         </select>
-      </div>
-
-      <div class="form-group">
-        <label>Qtd. de Itens</label>
-        <input type="number" id="f-qtd" placeholder="1" min="1" step="1" value="1" oninput="calcValorTotal()">
       </div>
 
       <div class="form-group">
@@ -1082,17 +1032,59 @@ onAuthStateChanged(auth, user => {
 
       <div class="form-group full">
         <label>Descrição / Observações</label>
-        <textarea id="f-desc" placeholder="Dimensões, referências, detalhes do pedido..."></textarea>
-      </div>
-
-      <!-- Múltiplos itens — só aparece em novo trabalho -->
-      <div class="form-group full" id="grupo-itens-extra" style="display:none">
-        <label>Itens da Requisição</label>
-        <div id="itens-lista" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
-        <button type="button" onclick="adicionarItem()" style="margin-top:8px;background:none;border:1px dashed var(--border);color:var(--text-muted);padding:8px;border-radius:7px;width:100%;cursor:pointer;font-family:var(--font-body);font-size:13px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-analog)';this.style.color='var(--accent-analog)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">+ Adicionar outro item</button>
+        <textarea id="f-desc" placeholder="Dimensões, referências, detalhes gerais..."></textarea>
       </div>
 
     </div>
+
+    <!-- Lista de itens da requisição -->
+    <div id="edit-single-item" style="display:none">
+      <!-- Campos usados somente na edição de 1 item -->
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Tabela de Preços (opcional)</label>
+          <select id="f-preco-sel" onchange="aplicarPrecoTabela()">
+            <option value="">— Selecionar da tabela —</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Trabalho</label>
+          <input type="text" id="f-nome" placeholder="Ex: Retrato A4 acrílico, Logo digital...">
+        </div>
+        <div class="form-group" id="grupo-elementos" style="display:none">
+          <label>Qtd. de Elementos</label>
+          <input type="number" id="f-elementos" placeholder="0" min="0" step="1" oninput="calcValorDigital()">
+        </div>
+        <div class="form-group" id="grupo-valor-elemento" style="display:none">
+          <label>Valor por Elemento (R$)</label>
+          <input type="number" id="f-valor-elemento" placeholder="0,00" step="0.01" min="0" oninput="calcValorDigital()">
+        </div>
+        <div class="form-group">
+          <label>Qtd.</label>
+          <input type="number" id="f-qtd" placeholder="1" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="f-valor" placeholder="0,00" step="0.01" min="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista dinâmica de itens (novo trabalho) -->
+    <div id="requisicao-itens-container" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <label style="text-transform:uppercase;font-size:11px;letter-spacing:0.06em;color:var(--text-muted)">Itens da Requisição</label>
+        <span id="req-total-label" style="font-family:var(--font-mono);font-size:13px;color:var(--green)">Total: R$ 0,00</span>
+      </div>
+      <div id="requisicao-itens-lista" style="display:flex;flex-direction:column;gap:10px"></div>
+      <button type="button" onclick="adicionarItemRequisicao()"
+        style="margin-top:10px;background:none;border:1px dashed var(--border);color:var(--text-muted);padding:10px;border-radius:7px;width:100%;cursor:pointer;font-family:var(--font-body);font-size:13px;transition:all .2s"
+        onmouseover="this.style.borderColor='var(--accent-analog)';this.style.color='var(--accent-analog)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+        + Adicionar outro trabalho
+      </button>
+    </div>
+
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-save" onclick="saveTrabalho()">Salvar</button>
@@ -1429,33 +1421,34 @@ function openModal(id) {
     sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
   });
 
-  // popular seletor de preços
-  popularSeletorPrecos();
-
-  // default date
   if (!id) {
+    // NOVO — mostra lista dinâmica de itens
+    document.getElementById('modal-title-text').textContent = '🖌️ Nova Requisição';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('edit-single-item').style.display = 'none';
+    document.getElementById('requisicao-itens-container').style.display = '';
+
+    selectType('analog');
+    document.getElementById('f-paciente').value = '';
+    document.getElementById('f-status').value = 'pendente';
     document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
     document.getElementById('f-data-entrega').value = '';
-    document.getElementById('modal-title-text').textContent = '🖌️ Novo Trabalho';
-    document.getElementById('edit-id').value = '';
-    selectType('analog');
-    document.getElementById('f-nome').value = '';
-    document.getElementById('f-paciente').value = '';
-    document.getElementById('f-valor').value = '';
-    document.getElementById('f-qtd').value = '1';
-    document.getElementById('f-elementos').value = '';
-    document.getElementById('f-valor-elemento').value = '';
-    document.getElementById('f-status').value = 'pendente';
     document.getElementById('f-desc').value = '';
     document.getElementById('f-cliente').value = '';
-    // mostrar itens extras só em novo
-    document.getElementById('grupo-itens-extra').style.display = '';
-    document.getElementById('itens-lista').innerHTML = '';
+
+    // inicia com 1 item
+    document.getElementById('requisicao-itens-lista').innerHTML = '';
+    adicionarItemRequisicao();
+
   } else {
+    // EDIÇÃO — mostra campos simples
     const t = trabalhos.find(x => x.id === id);
     if (!t) return;
     document.getElementById('modal-title-text').textContent = '✏️ Editar Trabalho';
     document.getElementById('edit-id').value = t.id;
+    document.getElementById('edit-single-item').style.display = '';
+    document.getElementById('requisicao-itens-container').style.display = 'none';
+
     selectType(t.tipo);
     document.getElementById('f-nome').value = t.nome;
     document.getElementById('f-paciente').value = t.paciente || '';
@@ -1468,9 +1461,7 @@ function openModal(id) {
     document.getElementById('f-data-entrega').value = t.dataEntrega || '';
     document.getElementById('f-desc').value = t.desc || '';
     document.getElementById('f-cliente').value = t.clienteId || '';
-    // esconder itens extras na edição
-    document.getElementById('grupo-itens-extra').style.display = 'none';
-    document.getElementById('itens-lista').innerHTML = '';
+    popularSeletorPrecos();
   }
 }
 
@@ -1513,58 +1504,121 @@ function calcValorTotal() {
   }
 }
 
-let itemExtraCount = 0;
-function adicionarItem() {
-  itemExtraCount++;
-  const lista = document.getElementById('itens-lista');
+let itemReqCount = 0;
+function adicionarItemRequisicao() {
+  itemReqCount++;
+  const lista = document.getElementById('requisicao-itens-lista');
+  const idx = itemReqCount;
+
+  // monta opções da tabela de preços
+  const tipo = document.getElementById('f-tipo').value;
+  const clienteId = document.getElementById('f-cliente').value;
+  const precosCliente = precos.filter(p => p.clienteId === clienteId && p.tipo === tipo);
+  const precosPadrao  = precos.filter(p => !p.clienteId && p.tipo === tipo);
+  const listaPrecos   = precosCliente.length > 0 ? precosCliente : precosPadrao;
+  const opcoesPrecos  = listaPrecos.map(p =>
+    `<option value="${p.id}" data-valor="${p.valor}">${p.nome} — R$ ${fmt(p.valor)}</option>`
+  ).join('');
+
   const div = document.createElement('div');
-  div.className = 'item-extra-row';
-  div.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center';
+  div.className = 'req-item';
+  div.dataset.idx = idx;
   div.innerHTML = `
-    <input class="item-extra-nome" type="text" placeholder="Nome do item" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;">
-    <input class="item-extra-qtd" type="number" placeholder="Qtd" min="1" value="1" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:60px">
-    <input class="item-extra-valor" type="number" placeholder="R$" step="0.01" min="0" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:80px">
-    <button onclick="this.parentElement.remove()" style="background:none;border:1px solid var(--border);color:var(--red);padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px">✕</button>
+    <div class="req-item-header">
+      <span>Item ${lista.children.length + 1}</span>
+      ${lista.children.length > 0 ? `<button onclick="this.closest('.req-item').remove();calcTotalRequisicao()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 6px">✕ remover</button>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${opcoesPrecos ? `
+      <select class="req-preco-sel" onchange="aplicarPrecoItem(this,${idx})" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:100%">
+        <option value="">— Tabela de preços —</option>
+        ${opcoesPrecos}
+      </select>` : ''}
+      <input class="req-nome" type="text" placeholder="Nome do trabalho *" required
+        style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:100%">
+      <div style="display:grid;grid-template-columns:80px 1fr;gap:8px">
+        <div>
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">QTD</label>
+          <input class="req-qtd" type="number" placeholder="1" min="1" value="1"
+            oninput="calcTotalRequisicao()"
+            style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:100%">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">VALOR (R$)</label>
+          <input class="req-valor" type="number" placeholder="0,00" step="0.01" min="0"
+            oninput="calcTotalRequisicao()"
+            style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:100%">
+        </div>
+      </div>
+    </div>
   `;
   lista.appendChild(div);
+  calcTotalRequisicao();
 }
 
+function aplicarPrecoItem(sel, idx) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) return;
+  const p = precos.find(x => x.id === opt.value);
+  if (!p) return;
+  const item = sel.closest('.req-item');
+  item.querySelector('.req-nome').value = p.nome;
+  item.querySelector('.req-valor').value = p.valor;
+  calcTotalRequisicao();
+}
+
+function calcTotalRequisicao() {
+  const itens = document.querySelectorAll('.req-item');
+  let total = 0;
+  itens.forEach(item => {
+    const qtd   = parseFloat(item.querySelector('.req-qtd')?.value) || 1;
+    const valor = parseFloat(item.querySelector('.req-valor')?.value) || 0;
+    total += qtd * valor;
+  });
+  const el = document.getElementById('req-total-label');
+  if (el) el.textContent = 'Total: R$ ' + fmt(total);
+}
+
+// Mantém compatibilidade com chamadas antigas
+function adicionarItem() { adicionarItemRequisicao(); }
+
 async function saveTrabalho() {
-  const nome        = document.getElementById('f-nome').value.trim();
-  const paciente    = document.getElementById('f-paciente').value.trim();
-  const valor       = parseFloat(document.getElementById('f-valor').value) || 0;
-  const qtd         = parseInt(document.getElementById('f-qtd').value) || 1;
   const tipo        = document.getElementById('f-tipo').value;
+  const paciente    = document.getElementById('f-paciente').value.trim();
   const status      = document.getElementById('f-status').value;
   const data        = document.getElementById('f-data').value;
   const dataEntrega = document.getElementById('f-data-entrega').value;
   const desc        = document.getElementById('f-desc').value.trim();
   const clienteId   = document.getElementById('f-cliente').value;
   const editId      = document.getElementById('edit-id').value;
-  const elementos     = tipo === 'digital' ? (parseInt(document.getElementById('f-elementos').value) || 0) : 0;
-  const valorElemento = tipo === 'digital' ? (parseFloat(document.getElementById('f-valor-elemento').value) || 0) : 0;
-
-  if (!nome) { alert('Informe o trabalho.'); return; }
 
   if (editId) {
+    // EDIÇÃO — salva item único
+    const nome        = document.getElementById('f-nome').value.trim();
+    const valor       = parseFloat(document.getElementById('f-valor').value) || 0;
+    const qtd         = parseInt(document.getElementById('f-qtd').value) || 1;
+    const elementos   = tipo === 'digital' ? (parseInt(document.getElementById('f-elementos').value) || 0) : 0;
+    const valorElemento = tipo === 'digital' ? (parseFloat(document.getElementById('f-valor-elemento').value) || 0) : 0;
+    if (!nome) { alert('Informe o nome do trabalho.'); return; }
     const existing = trabalhos.find(x => x.id === editId);
-    const updated = { ...(existing||{}), id: editId, nome, paciente, valor, qtd, tipo, status, data, dataEntrega, desc, clienteId, elementos, valorElemento };
-    await saveTrabalhoFB(updated);
-  } else {
-    // Salva item principal
-    const principal = { id: uid(), nome, paciente, valor, qtd, tipo, status, data, dataEntrega, desc, clienteId, elementos, valorElemento, criadoEm: Date.now() };
-    await saveTrabalhoFB(principal);
+    await saveTrabalhoFB({ ...(existing||{}), id: editId, nome, paciente, valor, qtd, tipo, status, data, dataEntrega, desc, clienteId, elementos, valorElemento });
 
-    // Salva itens extras se houver
-    const linhas = document.querySelectorAll('.item-extra-row');
-    for (const linha of linhas) {
-      const nomeExtra  = linha.querySelector('.item-extra-nome')?.value?.trim();
-      const valorExtra = parseFloat(linha.querySelector('.item-extra-valor')?.value) || 0;
-      const qtdExtra   = parseInt(linha.querySelector('.item-extra-qtd')?.value) || 1;
-      if (nomeExtra) {
-        await saveTrabalhoFB({ id: uid(), nome: nomeExtra, paciente, valor: valorExtra, qtd: qtdExtra, tipo, status, data, dataEntrega, desc, clienteId, elementos: 0, valorElemento: 0, criadoEm: Date.now() + 1 });
-      }
+  } else {
+    // NOVO — salva todos os itens da requisição
+    const itens = document.querySelectorAll('.req-item');
+    if (!itens.length) { alert('Adicione pelo menos um trabalho.'); return; }
+
+    let temErro = false;
+    const agora = Date.now();
+    for (let i = 0; i < itens.length; i++) {
+      const item  = itens[i];
+      const nome  = item.querySelector('.req-nome')?.value?.trim();
+      const valor = parseFloat(item.querySelector('.req-valor')?.value) || 0;
+      const qtd   = parseInt(item.querySelector('.req-qtd')?.value) || 1;
+      if (!nome) { alert(`Informe o nome do item ${i+1}.`); temErro = true; break; }
+      await saveTrabalhoFB({ id: uid(), nome, paciente, valor, qtd, tipo, status, data, dataEntrega, desc, clienteId, elementos: 0, valorElemento: 0, criadoEm: agora + i });
     }
+    if (temErro) return;
   }
 
   closeModal();
@@ -1625,7 +1679,7 @@ async function deleteCliente(id) {
   await deleteClienteFB(id);
 }
 
-// ─── RENDER TRABALHOS (NOVO LAYOUT EM COLUNAS) ────────────────
+// ─── RENDER TRABALHOS ────────────────────────────────
 function renderTrabalhos() {
   const q   = (document.getElementById('search-trabalhos').value || '').toLowerCase();
   const container = document.getElementById('trabalhos-cards-container');
@@ -1670,134 +1724,72 @@ function renderTrabalhos() {
     }
   });
 
-  // Ordenar trabalhos dentro de cada grupo por data de entrada (mais recente primeiro)
-  const ordenarPorData = (trabalhosArray) => {
-    return trabalhosArray.sort((a,b) => (b.data || '').localeCompare(a.data || ''));
-  };
+  let html = '';
 
-  // Construir HTML com grid de colunas (um cliente por coluna)
-  let html = '<div class="trabalhos-colunas">';
+  // Renderiza grupo de cada cliente
+  const renderGrupo = (nomeGrupo, trabalhosList) => {
+    const totalGrupo = trabalhosList.reduce((s,t)=>s+t.valor,0);
+    const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+    const cards = trabalhosList.map(t => {
+      const elemInfo = t.tipo === 'digital' && t.elementos
+        ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
+        : '';
+      const qtdInfo = t.qtd && t.qtd > 1
+        ? `<span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--text-muted)">×${t.qtd}</span>`
+        : '';
+      const entregaInfo = t.dataEntrega ? (() => {
+        const d = new Date(t.dataEntrega + 'T00:00:00');
+        const diff = Math.round((d - hoje0) / 86400000);
+        const cor = diff < 0 ? 'var(--red)' : diff <= 2 ? '#fbbf24' : 'var(--text-muted)';
+        const label = diff < 0 ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Entrega: ${formatDate(t.dataEntrega)}`;
+        return `<div style="font-size:11px;font-weight:600;color:${cor};margin-top:4px">📅 ${label}</div>`;
+      })() : '';
+      return `<div class="trabalho-card ${t.tipo}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div class="trabalho-card-nome">${t.nome} ${qtdInfo}</div>
+            ${t.paciente ? `<div class="trabalho-card-paciente">Paciente: ${t.paciente}</div>` : ''}
+          </div>
+          <span class="status-badge ${t.status}" style="white-space:nowrap;font-size:10px">${statusLabel(t.status)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 7px">${t.tipo==='analog'?'Analógico':'Digital'}</span>
+          ${elemInfo}
+        </div>
+        ${entregaInfo}
+        <div class="trabalho-card-row">
+          <span class="trabalho-card-valor">R$ ${fmt(t.valor)}</span>
+          <span class="trabalho-card-data">Entrada: ${formatDate(t.data)}</span>
+        </div>
+        <div class="trabalho-card-actions">
+          <button class="action-btn" onclick="openModal('${t.id}')" style="flex:1;text-align:center">✎ Editar</button>
+          <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="cliente-grupo">
+      <div class="cliente-grupo-header">
+        <div class="cliente-grupo-nome">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
+          ${nomeGrupo}
+          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosList.length})</span>
+        </div>
+        <span class="cliente-grupo-total">R$ ${fmt(totalGrupo)}</span>
+      </div>
+      <div class="trabalho-cards-grid">${cards}</div>
+    </div>`;
+  };
 
   // Clientes com trabalhos
   Object.keys(grupos).forEach(cid => {
     const c = clientes.find(x => x.id === cid);
-    const nomeCliente = c ? c.nome : 'Cliente removido';
-    const trabalhosDoCliente = ordenarPorData(grupos[cid]);
-    const totalCliente = trabalhosDoCliente.reduce((s,t)=>s+t.valor,0);
-
-    html += `<div class="cliente-coluna">
-      <div class="cliente-coluna-header">
-        <div class="cliente-coluna-nome">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
-          ${nomeCliente}
-          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosDoCliente.length})</span>
-        </div>
-        <div class="cliente-coluna-total">R$ ${fmt(totalCliente)}</div>
-      </div>
-      <div class="trabalhos-vertical">`;
-
-    trabalhosDoCliente.forEach(t => {
-      const elemInfo = t.tipo === 'digital' && t.elementos
-        ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
-        : '';
-      const qtdInfo = t.qtd && t.qtd > 1
-        ? `<span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--text-muted)">×${t.qtd}</span>`
-        : '';
-      const entregaInfo = t.dataEntrega ? (() => {
-        const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
-        const d = new Date(t.dataEntrega + 'T00:00:00');
-        const diff = Math.round((d - hoje0) / 86400000);
-        const cor = diff < 0 ? 'var(--red)' : diff <= 2 ? '#fbbf24' : 'var(--text-muted)';
-        const label = diff < 0 ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Entrega: ${formatDate(t.dataEntrega)}`;
-        return `<div style="font-size:11px;font-weight:600;color:${cor};margin-top:4px">📅 ${label}</div>`;
-      })() : '';
-
-      html += `<div class="trabalho-card ${t.tipo}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-          <div>
-            <div class="trabalho-card-nome">${t.nome} ${qtdInfo}</div>
-            ${t.paciente ? `<div class="trabalho-card-paciente">Paciente: ${t.paciente}</div>` : ''}
-          </div>
-          <span class="status-badge ${t.status}" style="white-space:nowrap;font-size:10px">${statusLabel(t.status)}</span>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 7px">${t.tipo==='analog'?'Analógico':'Digital'}</span>
-          ${elemInfo}
-        </div>
-        ${entregaInfo}
-        <div class="trabalho-card-row">
-          <span class="trabalho-card-valor">R$ ${fmt(t.valor)}</span>
-          <span class="trabalho-card-data">Entrada: ${formatDate(t.data)}</span>
-        </div>
-        <div class="trabalho-card-actions">
-          <button class="action-btn" onclick="openModal('${t.id}')" style="flex:1;text-align:center">✎ Editar</button>
-          <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
-        </div>
-      </div>`;
-    });
-
-    html += `</div></div>`;
+    html += renderGrupo(c ? c.nome : 'Cliente removido', grupos[cid]);
   });
 
-  // Sem cliente (se houver)
-  if (semCliente.length) {
-    const trabalhosSemCliente = ordenarPorData(semCliente);
-    const totalSemCliente = trabalhosSemCliente.reduce((s,t)=>s+t.valor,0);
-    html += `<div class="cliente-coluna">
-      <div class="cliente-coluna-header">
-        <div class="cliente-coluna-nome">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--accent-analog);display:inline-block"></span>
-          Sem cliente
-          <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${trabalhosSemCliente.length})</span>
-        </div>
-        <div class="cliente-coluna-total">R$ ${fmt(totalSemCliente)}</div>
-      </div>
-      <div class="trabalhos-vertical">`;
+  // Sem cliente
+  if (semCliente.length) html += renderGrupo('Sem cliente', semCliente);
 
-    trabalhosSemCliente.forEach(t => {
-      const elemInfo = t.tipo === 'digital' && t.elementos
-        ? `<span class="type-badge digital" style="font-size:10px;padding:2px 7px">${t.elementos} elem.</span>`
-        : '';
-      const qtdInfo = t.qtd && t.qtd > 1
-        ? `<span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--text-muted)">×${t.qtd}</span>`
-        : '';
-      const entregaInfo = t.dataEntrega ? (() => {
-        const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
-        const d = new Date(t.dataEntrega + 'T00:00:00');
-        const diff = Math.round((d - hoje0) / 86400000);
-        const cor = diff < 0 ? 'var(--red)' : diff <= 2 ? '#fbbf24' : 'var(--text-muted)';
-        const label = diff < 0 ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Entrega: ${formatDate(t.dataEntrega)}`;
-        return `<div style="font-size:11px;font-weight:600;color:${cor};margin-top:4px">📅 ${label}</div>`;
-      })() : '';
-
-      html += `<div class="trabalho-card ${t.tipo}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-          <div>
-            <div class="trabalho-card-nome">${t.nome} ${qtdInfo}</div>
-            ${t.paciente ? `<div class="trabalho-card-paciente">Paciente: ${t.paciente}</div>` : ''}
-          </div>
-          <span class="status-badge ${t.status}" style="white-space:nowrap;font-size:10px">${statusLabel(t.status)}</span>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-          <span class="type-badge ${t.tipo}" style="font-size:10px;padding:2px 7px">${t.tipo==='analog'?'Analógico':'Digital'}</span>
-          ${elemInfo}
-        </div>
-        ${entregaInfo}
-        <div class="trabalho-card-row">
-          <span class="trabalho-card-valor">R$ ${fmt(t.valor)}</span>
-          <span class="trabalho-card-data">Entrada: ${formatDate(t.data)}</span>
-        </div>
-        <div class="trabalho-card-actions">
-          <button class="action-btn" onclick="openModal('${t.id}')" style="flex:1;text-align:center">✎ Editar</button>
-          <button class="action-btn del" onclick="deleteTrabalho('${t.id}')">✕</button>
-        </div>
-      </div>`;
-    });
-
-    html += `</div></div>`;
-  }
-
-  html += `</div>`;
   container.innerHTML = html;
 }
 
@@ -1817,7 +1809,7 @@ function renderClientes() {
     const works = trabalhos.filter(t => t.clienteId === c.id);
     const total = works.reduce((s,t) => s+t.valor, 0);
     return `<tr>
-      <td style="font-family:'JetBrains Mono', monospace; color:var(--text-muted);">#${String(i+1).padStart(3,'0')}</td>
+      <td><span class="client-id">#${String(i+1).padStart(3,'0')}</span></td>
       <td><span class="client-name">${c.nome}</span>${c.social ? `<br><span style="font-size:11px;color:var(--accent-digital)">${c.social}</span>` : ''}</td>
       <td style="font-size:13px;color:var(--text-dim)">${c.contato || '—'}</td>
       <td><span class="money-cell">${fmt(total)}</span></td>
@@ -1940,8 +1932,6 @@ function renderDashboard() {
       </div>`;
     }).join('');
   }
-
-  const recent = [...trabalhos].sort((a,b)=>b.criadoEm-a.criadoEm).slice(0,8);
   const rPanel = document.getElementById('recent-panel');
   if (!recent.length) {
     rPanel.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhum trabalho ainda</div>';
@@ -2285,6 +2275,9 @@ window.aplicarPrecoTabela = aplicarPrecoTabela;
 window.updateBadgePrecos = updateBadgePrecos;
 window.calcValorTotal    = calcValorTotal;
 window.adicionarItem     = adicionarItem;
+window.adicionarItemRequisicao = adicionarItemRequisicao;
+window.aplicarPrecoItem  = aplicarPrecoItem;
+window.calcTotalRequisicao = calcTotalRequisicao;
 window.popularSeletorPrecos = popularSeletorPrecos;
 </script>
 
